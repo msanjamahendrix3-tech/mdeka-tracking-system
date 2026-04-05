@@ -163,23 +163,7 @@ export default function Home() {
             <Clock className="text-blue-600" /> Recent Updates
           </h3>
           <div className="space-y-6">
-            {[
-              { user: 'Dr. Athilo', action: 'added a new patient', time: '2 mins ago', target: 'John Doe' },
-              { user: 'System', action: 'scheduled appointment', time: '15 mins ago', target: 'Sarah Smith' },
-              { user: 'Dr. Jane', action: 'updated follow-up report', time: '1 hour ago', target: 'Mike Ross' },
-            ].map((item, i) => (
-              <div key={i} className="flex gap-4">
-                <div className="w-10 h-10 rounded-full bg-slate-100 shrink-0 flex items-center justify-center font-bold text-slate-500">
-                  {item.user[0]}
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm text-slate-800">
-                    <span className="font-semibold">{item.user}</span> {item.action} for <span className="font-semibold text-blue-600">{item.target}</span>
-                  </p>
-                  <p className="text-xs text-slate-400 mt-1">{item.time}</p>
-                </div>
-              </div>
-            ))}
+            <p className="text-slate-500 text-sm text-center py-8">No recent updates yet.</p>
           </div>
         </div>
 

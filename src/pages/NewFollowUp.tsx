@@ -14,24 +14,55 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 
+import { usePatients } from '../context/PatientContext';
+import { useAuth } from '../context/AuthContext';
+import { useLocation } from 'react-router-dom';
+
 export default function NewFollowUp() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { patients, addFollowUp } = usePatients();
+  const { allUsers } = useAuth();
+  
+  const initialPatientId = location.state?.patientId || '';
+  const initialPatient = patients.find(p => p.id === initialPatientId);
+
   const [formData, setFormData] = React.useState({
-    patientId: '',
-    patientName: '',
-    followUpDate: '',
-    followUpTime: '',
+    patientId: initialPatientId,
+    patientName: initialPatient?.name || '',
+    followUpDate: new Date().toISOString().split('T')[0],
+    followUpTime: '10:00',
     reason: '',
     priority: 'Medium',
     notes: '',
-    assignCHW: false,
-    chwId: ''
+    assignCHW: !!initialPatient?.assignedCHW,
+    chwName: initialPatient?.assignedCHW || ''
   });
+
+  const chws = allUsers.filter(u => u.role === 'CHW' && u.status === 'APPROVED');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, we would save this to a database
-    console.log('Saving follow-up:', formData);
+    
+    let targetPatientId = formData.patientId;
+    if (!targetPatientId) {
+      // Find patient by name if ID not set
+      const patient = patients.find(p => p.name.toLowerCase() === formData.patientName.toLowerCase());
+      if (patient) {
+        targetPatientId = patient.id;
+      } else {
+        alert('Patient not found. Please select a valid patient.');
+        return;
+      }
+    }
+
+    addFollowUp(targetPatientId, {
+      date: `${formData.followUpDate}T${formData.followUpTime}:00Z`,
+      officer: formData.chwName || 'Clinic Staff',
+      status: 'Scheduled',
+      notes: formData.reason + (formData.notes ? ': ' + formData.notes : '')
+    });
+
     navigate('/follow-up');
   };
 
@@ -167,13 +198,13 @@ export default function NewFollowUp() {
                     <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                     <select 
                       className="w-full pl-12 pr-4 py-3 bg-white border-slate-200 rounded-xl focus:border-blue-500 focus:ring-0 transition-all"
-                      value={formData.chwId}
-                      onChange={(e) => setFormData({...formData, chwId: e.target.value})}
+                      value={formData.chwName}
+                      onChange={(e) => setFormData({...formData, chwName: e.target.value})}
                     >
                       <option value="">Select an officer...</option>
-                      <option value="1">Officer John Mdeka (Sector 4)</option>
-                      <option value="2">Officer Sarah Phiri (Sector 2)</option>
-                      <option value="3">Officer Banda (Sector 1)</option>
+                      {chws.map(chw => (
+                        <option key={chw.username} value={chw.name}>{chw.name}</option>
+                      ))}
                     </select>
                   </div>
                 </div>

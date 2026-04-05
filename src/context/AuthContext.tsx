@@ -25,15 +25,20 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const INITIAL_USERS: User[] = [
-  { username: 'admin', name: 'Dr. Athilo', role: 'ADMIN', status: 'APPROVED' },
-  { username: 'clinician', name: 'Nurse Grace', role: 'CLINICAL', clinic: 'General', status: 'APPROVED' },
-  { username: 'chw', name: 'Officer John', role: 'CHW', clinic: 'Community', status: 'APPROVED' },
+  { username: 'hastings', name: 'Hastings', role: 'ADMIN', status: 'APPROVED' },
 ];
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [users, setUsers] = useState<User[]>(() => {
     const saved = localStorage.getItem('mdeka_all_users');
-    return saved ? JSON.parse(saved) : INITIAL_USERS;
+    const loadedUsers: User[] = saved ? JSON.parse(saved) : INITIAL_USERS;
+    
+    // Ensure 'hastings' is always present in the users list
+    const hasHastings = loadedUsers.some(u => u.username === 'hastings');
+    if (!hasHastings) {
+      return [...loadedUsers, ...INITIAL_USERS];
+    }
+    return loadedUsers;
   });
 
   const [user, setUser] = useState<User | null>(() => {
@@ -51,9 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!foundUser) return { success: false, message: 'User not found.' };
     
     // Mock password check
-    const isValidPassword = (username === 'admin' && password === 'admin123') || 
-                          (username === 'clinician' && password === 'clinic123') || 
-                          (username === 'chw' && password === 'chw123') ||
+    const isValidPassword = (username === 'hastings' && password === 'mdeka48') || 
                           (password === 'password123'); // Default for new users
 
     if (!isValidPassword) return { success: false, message: 'Invalid password.' };

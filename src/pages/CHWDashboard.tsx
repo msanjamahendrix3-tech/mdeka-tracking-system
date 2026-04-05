@@ -11,9 +11,34 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
+import { usePatients } from '../context/PatientContext';
+import { useNavigate } from 'react-router-dom';
 
 export default function CHWDashboard() {
   const { user } = useAuth();
+  const { patients } = usePatients();
+  const navigate = useNavigate();
+
+  // Filter patients assigned to this CHW
+  const assignedPatients = patients.filter(p => p.assignedCHW === user?.name);
+  
+  const today = new Date().toISOString().split('T')[0];
+
+  // Separate pending and completed visits
+  const visits = assignedPatients.map(p => {
+    const todayFollowUp = p.followUps?.find(f => f.date.startsWith(today));
+    return {
+      id: p.id,
+      name: p.name,
+      address: p.address,
+      priority: p.clinic === 'Malaria' ? 'High' : 'Routine',
+      time: todayFollowUp ? new Date(todayFollowUp.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Today',
+      status: todayFollowUp ? 'Completed' : 'Pending'
+    };
+  });
+
+  const pendingVisits = visits.filter(v => v.status === 'Pending');
+  const completedVisits = visits.filter(v => v.status === 'Completed');
 
   return (
     <div className="space-y-8">
@@ -37,21 +62,21 @@ export default function CHWDashboard() {
             <MapPin size={24} />
           </div>
           <p className="text-slate-500 text-sm font-medium">Assigned Visits</p>
-          <p className="text-3xl font-bold text-slate-900 mt-1">8</p>
+          <p className="text-3xl font-bold text-slate-900 mt-1">{visits.length}</p>
         </div>
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
           <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600 mb-4">
             <CheckCircle2 size={24} />
           </div>
           <p className="text-slate-500 text-sm font-medium">Completed Today</p>
-          <p className="text-3xl font-bold text-slate-900 mt-1">3</p>
+          <p className="text-3xl font-bold text-slate-900 mt-1">{completedVisits.length}</p>
         </div>
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
           <div className="w-12 h-12 bg-orange-50 rounded-xl flex items-center justify-center text-orange-600 mb-4">
             <AlertCircle size={24} />
           </div>
           <p className="text-slate-500 text-sm font-medium">High Priority</p>
-          <p className="text-3xl font-bold text-slate-900 mt-1">2</p>
+          <p className="text-3xl font-bold text-slate-900 mt-1">{pendingVisits.filter(v => v.priority === 'High').length}</p>
         </div>
       </div>
 
@@ -62,52 +87,93 @@ export default function CHWDashboard() {
           <button className="text-blue-600 text-sm font-semibold hover:underline">View Map</button>
         </div>
         <div className="divide-y divide-slate-100">
-          {[
-            { name: 'John Doe', address: '123 Mdeka Village, Sector 4', priority: 'High', time: '10:30 AM', status: 'Pending' },
-            { name: 'Mary Phiri', address: '45 Hillside Road, Sector 2', priority: 'Medium', time: '01:00 PM', status: 'Pending' },
-            { name: 'Samuel Banda', address: 'Sector 1, Near Market', priority: 'Routine', time: '03:30 PM', status: 'Pending' },
-          ].map((visit, i) => (
-            <div key={i} className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-slate-50 transition-colors">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center font-bold text-slate-500 text-lg">
-                  {visit.name[0]}
+          {pendingVisits.length === 0 ? (
+            <div className="p-12 text-center text-slate-500">
+              <CheckCircle2 className="mx-auto text-emerald-200 mb-4" size={48} />
+              <p className="font-medium">All assigned visits for today are completed!</p>
+            </div>
+          ) : (
+            pendingVisits.map((visit, i) => (
+              <div key={i} className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-slate-50 transition-colors">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center font-bold text-slate-500 text-lg">
+                    {visit.name[0]}
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-slate-900">{visit.name}</h4>
+                    <p className="text-sm text-slate-500 flex items-center gap-1">
+                      <MapPin size={14} /> {visit.address}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="font-bold text-slate-900">{visit.name}</h4>
-                  <p className="text-sm text-slate-500 flex items-center gap-1">
-                    <MapPin size={14} /> {visit.address}
-                  </p>
+                <div className="flex flex-wrap gap-8">
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Scheduled Time</p>
+                    <p className="text-sm font-semibold text-slate-700 flex items-center gap-1">
+                      <Clock size={14} className="text-blue-500" /> {visit.time}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Priority</p>
+                    <span className={
+                      "px-2 py-0.5 rounded text-[10px] font-bold uppercase " +
+                      (visit.priority === 'High' ? "bg-red-100 text-red-700" : "bg-orange-100 text-orange-700")
+                    }>
+                      {visit.priority}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => navigate(`/start-visit/${visit.id}`)}
+                    className="px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-all"
+                  >
+                    Start Visit
+                  </button>
+                  <button className="p-2 hover:bg-slate-100 rounded-lg text-slate-400">
+                    <MessageSquare size={18} />
+                  </button>
                 </div>
               </div>
-              <div className="flex flex-wrap gap-8">
-                <div className="space-y-1">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Scheduled Time</p>
-                  <p className="text-sm font-semibold text-slate-700 flex items-center gap-1">
-                    <Clock size={14} className="text-blue-500" /> {visit.time}
-                  </p>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Completed Follow-ups */}
+      {completedVisits.length > 0 && (
+        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="p-8 border-b border-slate-100">
+            <h3 className="text-lg font-bold text-slate-900">Completed Today</h3>
+          </div>
+          <div className="divide-y divide-slate-100">
+            {completedVisits.map((visit, i) => (
+              <div key={i} className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50/30">
+                <div className="flex items-center gap-4 opacity-75">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-100 flex items-center justify-center font-bold text-emerald-600 text-lg">
+                    <CheckCircle2 size={24} />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-slate-900">{visit.name}</h4>
+                    <p className="text-sm text-slate-500 flex items-center gap-1">
+                      <MapPin size={14} /> {visit.address}
+                    </p>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Priority</p>
-                  <span className={
-                    "px-2 py-0.5 rounded text-[10px] font-bold uppercase " +
-                    (visit.priority === 'High' ? "bg-red-100 text-red-700" : "bg-orange-100 text-orange-700")
-                  }>
-                    {visit.priority}
+                <div className="flex items-center gap-6">
+                  <div className="text-right">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Completed At</p>
+                    <p className="text-sm font-semibold text-slate-700">{visit.time}</p>
+                  </div>
+                  <span className="px-3 py-1 bg-emerald-100 text-emerald-700 text-[10px] font-bold uppercase rounded-full">
+                    Completed
                   </span>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <button className="px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-all">
-                  Start Visit
-                </button>
-                <button className="p-2 hover:bg-slate-100 rounded-lg text-slate-400">
-                  <MessageSquare size={18} />
-                </button>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Community Insights */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

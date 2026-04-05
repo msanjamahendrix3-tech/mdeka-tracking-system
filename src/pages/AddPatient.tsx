@@ -15,22 +15,51 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 
 import { usePatients } from '../context/PatientContext';
+import { useAuth } from '../context/AuthContext';
 
 export default function AddPatient() {
-  const { addPatient } = usePatients();
+  const { patients, addPatient } = usePatients();
+  const { allUsers, user } = useAuth();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isSuccess, setIsSuccess] = React.useState(false);
   const [formData, setFormData] = React.useState({
     name: '',
-    dob: '',
+    age: '',
     gender: 'Male',
     clinic: 'General',
     phone: '',
     email: '',
     address: '',
+    sector: '',
     allergies: '',
-    medications: ''
+    medications: '',
+    assignedCHW: ''
   });
+
+  const chws = allUsers.filter(u => u.role === 'CHW' && u.status === 'APPROVED');
+
+  // Automatically suggest CHW for Malaria cases
+  React.useEffect(() => {
+    if (formData.clinic === 'Malaria' && !formData.assignedCHW) {
+      // 1. Check if a patient with same phone exists (already assigned CHW)
+      const existingPatient = patients.find(p => p.phone === formData.phone && p.assignedCHW);
+      if (existingPatient) {
+        setFormData(prev => ({ ...prev, assignedCHW: existingPatient.assignedCHW }));
+        return;
+      }
+
+      // 2. If current user is a CHW, suggest them
+      if (user?.role === 'CHW') {
+        setFormData(prev => ({ ...prev, assignedCHW: user.name }));
+      } else if (formData.sector) {
+        // 3. Suggest CHW from same sector
+        const suggested = chws.find(c => c.clinic === formData.sector);
+        if (suggested) {
+          setFormData(prev => ({ ...prev, assignedCHW: suggested.name }));
+        }
+      }
+    }
+  }, [formData.clinic, formData.sector, formData.phone, user?.role, user?.name, chws.length, patients]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,14 +74,15 @@ export default function AddPatient() {
       // Reset form
       setFormData({
         name: '',
-        dob: '',
+        age: '',
         gender: 'Male',
         clinic: 'General',
         phone: '',
         email: '',
         address: '',
         allergies: '',
-        medications: ''
+        medications: '',
+        assignedCHW: ''
       });
       
       setTimeout(() => setIsSuccess(false), 3000);
@@ -91,12 +121,13 @@ export default function AddPatient() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700">Date of Birth</label>
+              <label className="text-sm font-semibold text-slate-700">Age</label>
               <input 
                 required
-                type="date" 
-                value={formData.dob}
-                onChange={(e) => setFormData({...formData, dob: e.target.value})}
+                type="number" 
+                value={formData.age}
+                onChange={(e) => setFormData({...formData, age: e.target.value})}
+                placeholder="e.g. 25"
                 className="w-full px-4 py-3 bg-slate-50 border-slate-200 rounded-xl focus:bg-white focus:border-blue-500 focus:ring-0 transition-all"
               />
             </div>
@@ -126,48 +157,81 @@ export default function AddPatient() {
                 <option value="UnderFive">Under Five Vaccinated Children</option>
               </select>
             </div>
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-700">Sector / Area</label>
+              <input 
+                type="text" 
+                value={formData.sector}
+                onChange={(e) => setFormData({...formData, sector: e.target.value})}
+                placeholder="e.g. Sector 4" 
+                className="w-full px-4 py-3 bg-slate-50 border-slate-200 rounded-xl focus:bg-white focus:border-blue-500 focus:ring-0 transition-all"
+              />
+            </div>
           </div>
         </div>
 
-        {/* Malaria Follow-up Assignment */}
-        <AnimatePresence>
+        {/* Care Coordination & CHW Assignment */}
+        <div className={`p-8 rounded-3xl border shadow-sm space-y-6 transition-all duration-500 ${
+          formData.clinic === 'Malaria' 
+            ? 'bg-orange-50 border-orange-200' 
+            : 'bg-white border-slate-200'
+        }`}>
+          <div className={`flex items-center gap-2 font-bold uppercase tracking-wider text-xs ${
+            formData.clinic === 'Malaria' ? 'text-orange-600' : 'text-blue-600'
+          }`}>
+            <MapPin size={16} /> {formData.clinic === 'Malaria' ? 'Home Follow-up Assignment (Malaria Case)' : 'Care Coordination'}
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className={`text-sm font-semibold ${
+                formData.clinic === 'Malaria' ? 'text-orange-800' : 'text-slate-700'
+              }`}>
+                Assign Community Health Worker (CHW)
+              </label>
+              <select 
+                value={formData.assignedCHW}
+                onChange={(e) => setFormData({...formData, assignedCHW: e.target.value})}
+                className={`w-full px-4 py-3 rounded-xl focus:ring-0 transition-all ${
+                  formData.clinic === 'Malaria' 
+                    ? 'bg-white border-orange-200 focus:border-orange-500' 
+                    : 'bg-slate-50 border-slate-200 focus:bg-white focus:border-blue-500'
+                }`}
+              >
+                <option value="">Select CHW...</option>
+                {chws.map(chw => (
+                  <option key={chw.username} value={chw.name}>
+                    {chw.name} {chw.clinic === formData.sector ? '(Suggested - Same Sector)' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <AnimatePresence>
+              {formData.clinic === 'Malaria' && (
+                <motion.div 
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  className="space-y-2"
+                >
+                  <label className="text-sm font-semibold text-orange-800">Follow-up Priority</label>
+                  <select className="w-full px-4 py-3 bg-white border-orange-200 rounded-xl focus:border-orange-500 focus:ring-0 transition-all">
+                    <option>High (Home visit within 24h)</option>
+                    <option>Medium (Home visit within 48h)</option>
+                    <option>Routine</option>
+                  </select>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
           {formData.clinic === 'Malaria' && (
-            <motion.div 
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="overflow-hidden"
-            >
-              <div className="bg-orange-50 p-8 rounded-3xl border border-orange-200 shadow-sm space-y-6">
-                <div className="flex items-center gap-2 text-orange-600 font-bold uppercase tracking-wider text-xs">
-                  <MapPin size={16} /> Home Follow-up Assignment (Malaria Case)
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-orange-800">Assign Follow-up Officer</label>
-                    <select className="w-full px-4 py-3 bg-white border-orange-200 rounded-xl focus:border-orange-500 focus:ring-0 transition-all">
-                      <option>Select Officer...</option>
-                      <option>Officer John Mdeka</option>
-                      <option>Officer Sarah Phiri</option>
-                      <option>Officer Mike Banda</option>
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-orange-800">Follow-up Priority</label>
-                    <select className="w-full px-4 py-3 bg-white border-orange-200 rounded-xl focus:border-orange-500 focus:ring-0 transition-all">
-                      <option>High (Home visit within 24h)</option>
-                      <option>Medium (Home visit within 48h)</option>
-                      <option>Routine</option>
-                    </select>
-                  </div>
-                </div>
-                <p className="text-xs text-orange-700 italic">
-                  Note: Malaria positive cases require a mandatory home address verification and follow-up assignment.
-                </p>
-              </div>
-            </motion.div>
+            <p className="text-xs text-orange-700 italic">
+              Note: Malaria positive cases require a mandatory home address verification and follow-up assignment.
+            </p>
           )}
-        </AnimatePresence>
+        </div>
 
         {/* Contact Information */}
         <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">

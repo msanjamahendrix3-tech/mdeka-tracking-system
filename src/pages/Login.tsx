@@ -103,21 +103,6 @@ export default function Login() {
                 New to the system? <Link to="/register" className="text-blue-600 font-bold hover:underline">Create Account</Link>
               </p>
             </div>
-
-            <div className="pt-4 border-t border-slate-100">
-              <p className="text-xs text-slate-400 text-center font-medium uppercase tracking-wider mb-4">Demo Credentials</p>
-              <div className="grid grid-cols-1 gap-2">
-                <div className="p-3 bg-slate-50 rounded-xl text-[10px] text-slate-500">
-                  <span className="font-bold text-slate-700">Admin:</span> admin / admin123
-                </div>
-                <div className="p-3 bg-slate-50 rounded-xl text-[10px] text-slate-500">
-                  <span className="font-bold text-slate-700">Clinician:</span> clinician / clinic123
-                </div>
-                <div className="p-3 bg-slate-50 rounded-xl text-[10px] text-slate-500">
-                  <span className="font-bold text-slate-700">CHW:</span> chw / chw123
-                </div>
-              </div>
-            </div>
           </form>
         </div>
       </motion.div>

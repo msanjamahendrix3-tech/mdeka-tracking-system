@@ -29,28 +29,36 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { motion } from 'motion/react';
-
-const patientData = [
-  { name: 'Jan', patients: 400, appointments: 240 },
-  { name: 'Feb', patients: 300, appointments: 139 },
-  { name: 'Mar', patients: 200, appointments: 980 },
-  { name: 'Apr', patients: 278, appointments: 390 },
-  { name: 'May', patients: 189, appointments: 480 },
-  { name: 'Jun', patients: 239, appointments: 380 },
-  { name: 'Jul', patients: 349, appointments: 430 },
-];
-
-const healthMetrics = [
-  { name: 'Normal', value: 75, color: '#3b82f6' },
-  { name: 'At Risk', value: 15, color: '#f59e0b' },
-  { name: 'Critical', value: 10, color: '#ef4444' },
-];
-
 import { usePatients } from '../context/PatientContext';
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const { patients } = usePatients();
+
+  const healthMetrics = [
+    { name: 'Normal', value: patients.filter(p => p.status === 'Normal').length, color: '#3b82f6' },
+    { name: 'At Risk', value: patients.filter(p => p.status === 'At Risk').length, color: '#f59e0b' },
+    { name: 'Critical', value: patients.filter(p => p.status === 'Critical').length, color: '#ef4444' },
+  ];
+
+  const clinicStats = [
+    { label: 'NCD Clinic', value: patients.filter(p => p.clinic === 'NCD').length.toString(), icon: Activity, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { label: 'Epilepsy Clinic', value: patients.filter(p => p.clinic === 'Epilepsy').length.toString(), icon: ShieldCheck, color: 'text-purple-600', bg: 'bg-purple-50' },
+    { label: 'Malaria Positive', value: patients.filter(p => p.clinic === 'Malaria').length.toString(), icon: AlertCircle, color: 'text-orange-600', bg: 'bg-orange-50' },
+    { label: 'Under Five (Vaccinated)', value: patients.filter(p => p.clinic === 'UnderFive').length.toString(), icon: HeartPulse, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+  ];
+
+  // Group patients by month for the line chart
+  const last7Months = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - i);
+    return d.toLocaleString('default', { month: 'short' });
+  }).reverse();
+
+  const patientGrowthData = last7Months.map(month => ({
+    name: month,
+    patients: patients.filter(p => new Date(p.registeredAt).toLocaleString('default', { month: 'short' }) === month).length
+  }));
 
   return (
     <div className="space-y-8">
@@ -97,11 +105,11 @@ export default function Dashboard() {
               <Calendar size={24} />
             </div>
             <span className="text-emerald-500 text-sm font-medium flex items-center gap-1">
-              <TrendingUp size={16} /> +5%
+              <TrendingUp size={16} /> +0%
             </span>
           </div>
           <p className="text-slate-500 text-sm font-medium">New Appointments</p>
-          <p className="text-3xl font-bold text-slate-900 mt-1">142</p>
+          <p className="text-3xl font-bold text-slate-900 mt-1">0</p>
         </div>
 
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
@@ -109,23 +117,18 @@ export default function Dashboard() {
             <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center text-purple-600">
               <Activity size={24} />
             </div>
-            <span className="text-red-500 text-sm font-medium flex items-center gap-1">
-              -2%
+            <span className="text-emerald-500 text-sm font-medium flex items-center gap-1">
+              {patients.length > 0 ? '85%' : '0%'}
             </span>
           </div>
           <p className="text-slate-500 text-sm font-medium">Health Index</p>
-          <p className="text-3xl font-bold text-slate-900 mt-1">94.2%</p>
+          <p className="text-3xl font-bold text-slate-900 mt-1">{patients.length > 0 ? '85%' : '0%'}</p>
         </div>
       </div>
 
       {/* Clinic Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {[
-          { label: 'NCD Clinic', value: '412', icon: Activity, color: 'text-blue-600', bg: 'bg-blue-50' },
-          { label: 'Epilepsy Clinic', value: '156', icon: ShieldCheck, color: 'text-purple-600', bg: 'bg-purple-50' },
-          { label: 'Malaria Positive', value: '84', icon: AlertCircle, color: 'text-orange-600', bg: 'bg-orange-50' },
-          { label: 'Under Five (Vaccinated)', value: '892', icon: HeartPulse, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-        ].map((clinic, i) => (
+        {clinicStats.map((clinic, i) => (
           <motion.div 
             key={clinic.label}
             initial={{ opacity: 0, y: 10 }}
@@ -156,7 +159,7 @@ export default function Dashboard() {
           </div>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={patientData}>
+              <AreaChart data={patientGrowthData}>
                 <defs>
                   <linearGradient id="colorPatients" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
@@ -197,7 +200,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+        <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm relative">
           <div className="flex items-center justify-between mb-8">
             <h3 className="text-lg font-bold text-slate-900">Health Status Distribution</h3>
             <button className="p-2 hover:bg-slate-50 rounded-lg text-slate-400">
@@ -224,7 +227,7 @@ export default function Dashboard() {
               </PieChart>
             </ResponsiveContainer>
             <div className="absolute flex flex-col items-center">
-              <p className="text-3xl font-bold text-slate-900">2.4k</p>
+              <p className="text-3xl font-bold text-slate-900">{patients.length}</p>
               <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Total</p>
             </div>
           </div>
@@ -257,35 +260,42 @@ export default function Dashboard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {[
-                { name: 'John Cooper', status: 'Normal', date: 'Oct 24, 2023', doctor: 'Dr. Athilo', initial: 'JC', color: 'bg-blue-100 text-blue-600' },
-                { name: 'Sarah Jenkins', status: 'At Risk', date: 'Oct 23, 2023', doctor: 'Dr. Jane', initial: 'SJ', color: 'bg-amber-100 text-amber-600' },
-                { name: 'Robert Fox', status: 'Critical', date: 'Oct 22, 2023', doctor: 'Dr. Athilo', initial: 'RF', color: 'bg-red-100 text-red-600' },
-                { name: 'Esther Howard', status: 'Normal', date: 'Oct 21, 2023', doctor: 'Dr. Smith', initial: 'EH', color: 'bg-blue-100 text-blue-600' },
-              ].map((patient, i) => (
-                <tr key={i} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-8 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-500">
-                        {patient.initial}
-                      </div>
-                      <span className="font-semibold text-slate-900">{patient.name}</span>
-                    </div>
-                  </td>
-                  <td className="px-8 py-4">
-                    <span className={patient.color + " px-3 py-1 rounded-full text-xs font-bold"}>
-                      {patient.status}
-                    </span>
-                  </td>
-                  <td className="px-8 py-4 text-sm text-slate-500">{patient.date}</td>
-                  <td className="px-8 py-4 text-sm text-slate-500">{patient.doctor}</td>
-                  <td className="px-8 py-4">
-                    <button className="p-2 hover:bg-slate-100 rounded-lg text-slate-400">
-                      <MoreHorizontal size={18} />
-                    </button>
+              {patients.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-8 py-12 text-center text-slate-500 font-medium">
+                    No recent patients found.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                patients.slice(0, 5).map((patient, i) => (
+                  <tr key={i} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-8 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center font-bold text-blue-600">
+                          {patient.name[0]}
+                        </div>
+                        <span className="font-semibold text-slate-900">{patient.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-8 py-4">
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                        patient.status === 'Critical' ? 'bg-red-100 text-red-600' :
+                        patient.status === 'At Risk' ? 'bg-amber-100 text-amber-600' :
+                        'bg-blue-100 text-blue-600'
+                      }`}>
+                        {patient.status}
+                      </span>
+                    </td>
+                    <td className="px-8 py-4 text-sm text-slate-500">{new Date(patient.registeredAt).toLocaleDateString()}</td>
+                    <td className="px-8 py-4 text-sm text-slate-500">{patient.clinic}</td>
+                    <td className="px-8 py-4">
+                      <button className="p-2 hover:bg-slate-100 rounded-lg text-slate-400">
+                        <MoreHorizontal size={18} />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

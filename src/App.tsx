@@ -20,6 +20,7 @@ import CHWDashboard from './pages/CHWDashboard';
 import NewFollowUp from './pages/NewFollowUp';
 import Appointments from './pages/Appointments';
 import Register from './pages/Register';
+import StartVisit from './pages/StartVisit';
 
 function ProtectedRoute({ children, roles }: { children: React.ReactNode, roles?: string[] }) {
   const { user, isAuthenticated } = useAuth();
@@ -79,6 +80,11 @@ export default function App() {
             <Route path="/new-follow-up" element={
               <ProtectedRoute roles={['ADMIN', 'CLINICAL']}>
                 <Layout><NewFollowUp /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/start-visit/:patientId" element={
+              <ProtectedRoute roles={['CHW', 'ADMIN']}>
+                <Layout><StartVisit /></Layout>
               </ProtectedRoute>
             } />
             <Route path="/community" element={
