@@ -19,7 +19,14 @@ import { motion } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
 
 export default function AdminDashboard() {
-  const { pendingUsers, approveUser, rejectUser } = useAuth();
+  const { pendingUsers, approveUser, rejectUser, allUsers } = useAuth();
+  const [userSearch, setUserSearch] = React.useState('');
+
+  const filteredUsers = allUsers.filter(u => 
+    u.name.toLowerCase().includes(userSearch.toLowerCase()) ||
+    u.username.toLowerCase().includes(userSearch.toLowerCase()) ||
+    u.role.toLowerCase().includes(userSearch.toLowerCase())
+  );
 
   return (
     <div className="space-y-8">
@@ -155,6 +162,8 @@ export default function AdminDashboard() {
               <input 
                 type="text" 
                 placeholder="Search users..." 
+                value={userSearch}
+                onChange={(e) => setUserSearch(e.target.value)}
                 className="pl-10 pr-4 py-2 bg-slate-50 border-none rounded-xl text-sm w-48 focus:ring-2 focus:ring-blue-500/20 transition-all"
               />
             </div>
@@ -165,41 +174,44 @@ export default function AdminDashboard() {
                 <tr className="bg-slate-50">
                   <th className="px-8 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">User</th>
                   <th className="px-8 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Role</th>
+                  <th className="px-8 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Clinic</th>
                   <th className="px-8 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
-                  <th className="px-8 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Last Login</th>
-                  <th className="px-8 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Action</th>
+                  <th className="px-8 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {[
-                  { name: 'Dr. Athilo', email: 'athilo@mdeka.com', role: 'Admin', status: 'Active', initial: 'AT' },
-                  { name: 'Sarah Jenkins', email: 'sarah@mdeka.com', role: 'Coordinator', status: 'Active', initial: 'SJ' },
-                  { name: 'Dr. Jane Smith', email: 'jane@mdeka.com', role: 'Doctor', status: 'Away', initial: 'JS' },
-                  { name: 'Mike Ross', email: 'mike@mdeka.com', role: 'Support', status: 'Active', initial: 'MR' },
-                ].map((user, i) => (
+                {filteredUsers.map((user, i) => (
                   <tr key={i} className="hover:bg-slate-50 transition-colors">
                     <td className="px-8 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-500 text-xs">
-                          {user.initial}
+                        <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center font-bold text-blue-600 text-xs">
+                          {user.name[0]}
                         </div>
                         <div>
                           <p className="text-sm font-bold text-slate-900">{user.name}</p>
-                          <p className="text-xs text-slate-500">{user.email}</p>
+                          <p className="text-xs text-slate-500">@{user.username}</p>
                         </div>
                       </div>
                     </td>
                     <td className="px-8 py-4">
-                      <span className="text-xs font-semibold text-slate-600">{user.role}</span>
+                      <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${
+                        user.role === 'ADMIN' ? 'bg-purple-100 text-purple-600' :
+                        user.role === 'CHW' ? 'bg-emerald-100 text-emerald-600' :
+                        'bg-blue-100 text-blue-600'
+                      }`}>
+                        {user.role}
+                      </span>
+                    </td>
+                    <td className="px-8 py-4">
+                      <span className="text-xs text-slate-500">{user.clinic || 'N/A'}</span>
                     </td>
                     <td className="px-8 py-4">
                       <div className="flex items-center gap-2">
-                        <div className={user.status === 'Active' ? "w-2 h-2 bg-emerald-500 rounded-full" : "w-2 h-2 bg-amber-500 rounded-full"}></div>
+                        <div className={user.status === 'APPROVED' ? "w-2 h-2 bg-emerald-500 rounded-full" : "w-2 h-2 bg-amber-500 rounded-full"}></div>
                         <span className="text-xs font-medium text-slate-600">{user.status}</span>
                       </div>
                     </td>
-                    <td className="px-8 py-4 text-xs text-slate-500">2 mins ago</td>
-                    <td className="px-8 py-4">
+                    <td className="px-8 py-4 text-right">
                       <button className="p-2 hover:bg-slate-100 rounded-lg text-slate-400">
                         <MoreVertical size={16} />
                       </button>

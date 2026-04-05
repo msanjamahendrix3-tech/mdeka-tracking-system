@@ -17,13 +17,18 @@ import { useNavigate } from 'react-router-dom';
 export default function Patients() {
   const { patients, exportPatients } = usePatients();
   const [searchTerm, setSearchTerm] = React.useState('');
+  const [statusFilter, setStatusFilter] = React.useState<string>('All');
   const navigate = useNavigate();
 
-  const filteredPatients = patients.filter(p => 
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.phone.includes(searchTerm) ||
-    p.clinic.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredPatients = patients.filter(p => {
+    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.phone.includes(searchTerm) ||
+      p.clinic.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = statusFilter === 'All' || p.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
 
   return (
     <div className="space-y-8">
@@ -61,9 +66,21 @@ export default function Patients() {
             />
           </div>
           <div className="flex items-center gap-2">
-            <button className="p-3 bg-slate-50 text-slate-500 rounded-xl hover:bg-slate-100 transition-colors">
-              <Filter size={18} />
-            </button>
+            <div className="flex items-center bg-slate-50 p-1 rounded-xl border border-slate-100">
+              {['All', 'Normal', 'At Risk', 'Critical'].map((status) => (
+                <button
+                  key={status}
+                  onClick={() => setStatusFilter(status)}
+                  className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                    statusFilter === status 
+                      ? 'bg-white text-blue-600 shadow-sm' 
+                      : 'text-slate-400 hover:text-slate-600'
+                  }`}
+                >
+                  {status}
+                </button>
+              ))}
+            </div>
             <span className="text-sm text-slate-400 font-medium ml-2">
               Showing {filteredPatients.length} patients
             </span>

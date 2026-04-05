@@ -16,6 +16,7 @@ interface AuthContextType {
   logout: () => void;
   register: (userData: Omit<User, 'status'>) => Promise<void>;
   pendingUsers: User[];
+  allUsers: User[];
   approveUser: (username: string) => void;
   rejectUser: (username: string) => void;
   isAuthenticated: boolean;
@@ -93,6 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       logout, 
       register, 
       pendingUsers, 
+      allUsers: users,
       approveUser, 
       rejectUser,
       isAuthenticated: !!user 
