@@ -1,0 +1,17 @@
+{
+  "name": "Mdeka Demo Tracker",
+  "short_name": "Mdeka Demo",
+  "description": "A modern healthcare tracking system for Mdeka.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#2563eb",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2966/2966327.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
