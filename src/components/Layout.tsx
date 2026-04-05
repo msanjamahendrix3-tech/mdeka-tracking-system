@@ -21,6 +21,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import ConnectionStatus from './ConnectionStatus';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -73,6 +74,7 @@ export default function Layout({ children }: LayoutProps) {
 
   return (
     <div className="min-h-screen bg-slate-50 flex font-sans">
+      <ConnectionStatus />
       {/* Sidebar */}
       <aside 
         className={cn(
