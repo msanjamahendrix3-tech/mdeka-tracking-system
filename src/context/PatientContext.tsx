@@ -61,7 +61,7 @@ export function PatientProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Only subscribe if auth is ready and user is authorized (Approved or Admin)
-    const isAdminEmail = auth.currentUser?.email === 'msanjamahendrix3@gmail.com' && auth.currentUser?.emailVerified;
+    const isAdminEmail = auth.currentUser?.email === 'msanjamahendrix3@gmail.com';
     const canAccess = isAuthenticated || (user?.role === 'ADMIN') || isAdminEmail;
 
     if (!isAuthReady || !canAccess) {
