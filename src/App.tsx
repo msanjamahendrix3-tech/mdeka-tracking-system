@@ -7,6 +7,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { PatientProvider } from './context/PatientContext';
+import { NotificationProvider } from './context/NotificationContext';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
@@ -23,7 +24,15 @@ import Register from './pages/Register';
 import StartVisit from './pages/StartVisit';
 
 function ProtectedRoute({ children, roles }: { children: React.ReactNode, roles?: string[] }) {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isAuthReady } = useAuth();
+  
+  if (!isAuthReady) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
   
   if (!isAuthenticated) {
     return <Navigate to="/login" />;
@@ -48,8 +57,9 @@ export default function App() {
   return (
     <AuthProvider>
       <PatientProvider>
-        <Router>
-          <Routes>
+        <NotificationProvider>
+          <Router>
+            <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/" element={
@@ -103,8 +113,9 @@ export default function App() {
             <Route path="/doctors" element={<ProtectedRoute roles={['ADMIN', 'CLINICAL']}><Layout><Community /></Layout></ProtectedRoute>} />
           </Routes>
         </Router>
-      </PatientProvider>
-    </AuthProvider>
+      </NotificationProvider>
+    </PatientProvider>
+  </AuthProvider>
   );
 }
 

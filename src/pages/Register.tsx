@@ -1,29 +1,44 @@
 import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth, UserRole } from '../context/AuthContext';
-import { Stethoscope, User, UserPlus, Building2, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { Stethoscope, User, UserPlus, Building2, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 
 export default function Register() {
   const [formData, setFormData] = React.useState({
+    email: '',
+    password: '',
     username: '',
     name: '',
     role: 'CLINICAL' as UserRole,
     clinic: ''
   });
+  const [error, setError] = React.useState('');
   const [isSubmitted, setIsSubmitted] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
-  const { register } = useAuth();
+  const { registerWithEmail, isAuthenticated, isAuthReady } = useAuth();
   const navigate = useNavigate();
+
+  React.useEffect(() => {
+    if (isAuthReady && isAuthenticated) {
+      navigate('/');
+    }
+  }, [isAuthenticated, isAuthReady, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
     setIsLoading(true);
     
-    await register(formData);
+    const { email, password, ...profileData } = formData;
+    const result = await registerWithEmail(email, password, profileData);
     
     setIsLoading(false);
-    setIsSubmitted(true);
+    if (result.success) {
+      setIsSubmitted(true);
+    } else {
+      setError(result.message || 'Registration failed.');
+    }
   };
 
   if (isSubmitted) {
@@ -77,7 +92,38 @@ export default function Register() {
           </div>
 
           <form onSubmit={handleSubmit} className="p-8 space-y-6">
+            {error && (
+              <div className="p-4 bg-red-50 border border-red-100 rounded-xl flex items-center gap-3 text-red-600 text-sm">
+                <AlertCircle size={18} />
+                {error}
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">Email Address</label>
+                <input 
+                  required
+                  type="email" 
+                  value={formData.email}
+                  onChange={(e) => setFormData({...formData, email: e.target.value})}
+                  placeholder="name@example.com" 
+                  className="w-full px-4 py-3 bg-slate-50 border-slate-200 rounded-xl focus:bg-white focus:border-blue-500 focus:ring-0 transition-all"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">Password</label>
+                <input 
+                  required
+                  type="password" 
+                  value={formData.password}
+                  onChange={(e) => setFormData({...formData, password: e.target.value})}
+                  placeholder="••••••••" 
+                  className="w-full px-4 py-3 bg-slate-50 border-slate-200 rounded-xl focus:bg-white focus:border-blue-500 focus:ring-0 transition-all"
+                />
+              </div>
+
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-slate-700">Full Name</label>
                 <div className="relative">
@@ -115,6 +161,7 @@ export default function Register() {
                 >
                   <option value="CLINICAL">Nurse / Clinician / Doctor</option>
                   <option value="CHW">Community Health Worker</option>
+                  <option value="ADMIN">System Administrator</option>
                 </select>
               </div>
 
@@ -137,7 +184,7 @@ export default function Register() {
             <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100 flex gap-3">
               <Stethoscope className="text-blue-600 shrink-0" size={20} />
               <p className="text-xs text-blue-800 leading-relaxed">
-                By creating an account, you are requesting access to the Mdeka Demo Tracker. Your credentials will be <span className="font-bold">password123</span> by default until you change it.
+                By creating an account, you are requesting access to the Mdeka Health Tracker. Your account will be secured with your email and password.
               </p>
             </div>
 

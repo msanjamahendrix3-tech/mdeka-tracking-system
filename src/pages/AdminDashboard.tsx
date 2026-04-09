@@ -132,13 +132,13 @@ export default function AdminDashboard() {
                       <td className="px-8 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button 
-                            onClick={() => approveUser(user.username)}
+                            onClick={() => approveUser(user.uid)}
                             className="px-3 py-1.5 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 transition-all"
                           >
                             Approve
                           </button>
                           <button 
-                            onClick={() => rejectUser(user.username)}
+                            onClick={() => rejectUser(user.uid)}
                             className="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-bold rounded-lg hover:bg-red-100 transition-all"
                           >
                             Reject

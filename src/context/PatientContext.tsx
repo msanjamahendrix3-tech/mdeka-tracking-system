@@ -1,4 +1,15 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { 
+  collection, 
+  onSnapshot, 
+  addDoc, 
+  updateDoc, 
+  doc, 
+  query, 
+  orderBy 
+} from 'firebase/firestore';
+import { db, auth } from '../firebase';
+import { useAuth, handleFirestoreError } from './AuthContext';
 
 export interface FollowUpRecord {
   id: string;
@@ -17,6 +28,7 @@ export interface Patient {
   phone: string;
   email: string;
   address: string;
+  sector?: string;
   allergies?: string;
   medications?: string;
   registeredAt: string;
@@ -25,46 +37,90 @@ export interface Patient {
   followUps?: FollowUpRecord[];
 }
 
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
 interface PatientContextType {
   patients: Patient[];
-  addPatient: (patient: Omit<Patient, 'id' | 'registeredAt' | 'status' | 'followUps'>) => void;
-  addFollowUp: (patientId: string, followUp: Omit<FollowUpRecord, 'id'>) => void;
+  addPatient: (patient: Omit<Patient, 'id' | 'registeredAt' | 'status' | 'followUps'>) => Promise<void>;
+  addFollowUp: (patientId: string, followUp: Omit<FollowUpRecord, 'id'>) => Promise<void>;
   exportPatients: () => void;
 }
 
 const PatientContext = createContext<PatientContextType | undefined>(undefined);
 
 export function PatientProvider({ children }: { children: React.ReactNode }) {
-  const [patients, setPatients] = useState<Patient[]>(() => {
-    const saved = localStorage.getItem('mdeka_patients');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const { user, isAuthenticated, isAuthReady } = useAuth();
 
   useEffect(() => {
-    localStorage.setItem('mdeka_patients', JSON.stringify(patients));
-  }, [patients]);
+    // Only subscribe if auth is ready and user is authorized (Approved or Admin)
+    const isAdminEmail = auth.currentUser?.email === 'msanjamahendrix3@gmail.com' && auth.currentUser?.emailVerified;
+    const canAccess = isAuthenticated || (user?.role === 'ADMIN') || isAdminEmail;
 
-  const addPatient = (patientData: Omit<Patient, 'id' | 'registeredAt' | 'status' | 'followUps'>) => {
-    const newPatient: Patient = {
+    if (!isAuthReady || !canAccess) {
+      setPatients([]);
+      return;
+    }
+
+    const q = query(collection(db, 'patients'), orderBy('registeredAt', 'desc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const patientsList = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Patient[];
+      setPatients(patientsList);
+    }, (error) => {
+      // If we still get a permission error, it might be because the user document 
+      // hasn't been created yet or status hasn't updated in the rule's cache.
+      if (error.message.includes('insufficient permissions')) {
+        console.warn('Patient subscription: Insufficient permissions. User might not be fully approved yet.');
+        return;
+      }
+      handleFirestoreError(error, OperationType.LIST, 'patients');
+    });
+
+    return () => unsubscribe();
+  }, [isAuthReady, isAuthenticated, user]);
+
+  const addPatient = async (patientData: Omit<Patient, 'id' | 'registeredAt' | 'status' | 'followUps'>) => {
+    const newPatient = {
       ...patientData,
-      id: Math.random().toString(36).substr(2, 9),
       registeredAt: new Date().toISOString(),
       status: 'Normal',
       followUps: []
     };
-    setPatients(prev => [newPatient, ...prev]);
+    try {
+      await addDoc(collection(db, 'patients'), newPatient);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'patients');
+    }
   };
 
-  const addFollowUp = (patientId: string, followUpData: Omit<FollowUpRecord, 'id'>) => {
+  const addFollowUp = async (patientId: string, followUpData: Omit<FollowUpRecord, 'id'>) => {
     const newFollowUp: FollowUpRecord = {
       ...followUpData,
       id: Math.random().toString(36).substr(2, 9)
     };
-    setPatients(prev => prev.map(p => 
-      p.id === patientId 
-        ? { ...p, followUps: [newFollowUp, ...(p.followUps || [])] } 
-        : p
-    ));
+    
+    const patient = patients.find(p => p.id === patientId);
+    if (!patient) return;
+
+    const updatedFollowUps = [newFollowUp, ...(patient.followUps || [])];
+    
+    try {
+      await updateDoc(doc(db, 'patients', patientId), {
+        followUps: updatedFollowUps
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `patients/${patientId}`);
+    }
   };
 
   const exportPatients = () => {

@@ -1,5 +1,5 @@
 {
-  "name": "Mdeka Demo Tracker",
-  "description": "A comprehensive health tracking system for managing patients, appointments, and community health data.",
+  "name": "Mdeka Health Tracker",
+  "description": "A real-time health tracking system with community sharing, notifications, and secure patient management.",
   "requestFramePermissions": []
 }

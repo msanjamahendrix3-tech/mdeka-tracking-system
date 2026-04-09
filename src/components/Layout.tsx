@@ -22,6 +22,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import ConnectionStatus from './ConnectionStatus';
+import { useNotifications } from '../context/NotificationContext';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -34,17 +35,27 @@ interface LayoutProps {
 export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout, isAuthenticated } = useAuth();
+  const { user, logout, isAuthenticated, isAuthReady } = useAuth();
+  const { notifications, unreadCount, markAsRead } = useNotifications();
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
+  const [isNotificationOpen, setIsNotificationOpen] = React.useState(false);
 
   // Redirect to login if not authenticated
   React.useEffect(() => {
-    if (!isAuthenticated && location.pathname !== '/login') {
+    if (isAuthReady && !isAuthenticated && location.pathname !== '/login' && location.pathname !== '/register') {
       navigate('/login');
     }
-  }, [isAuthenticated, location.pathname, navigate]);
+  }, [isAuthenticated, isAuthReady, location.pathname, navigate]);
 
-  if (!isAuthenticated || location.pathname === '/login') {
+  if (!isAuthReady) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated && (location.pathname === '/login' || location.pathname === '/register')) {
     return <>{children}</>;
   }
 
@@ -177,10 +188,74 @@ export default function Layout({ children }: LayoutProps) {
           </div>
 
           <div className="flex items-center gap-4">
-            <button className="relative p-2 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors">
-              <Bell size={20} />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-            </button>
+            <div className="relative">
+              <button 
+                onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+                className="relative p-2 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors"
+              >
+                <Bell size={20} />
+                {unreadCount > 0 && (
+                  <span className="absolute top-2 right-2 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-white flex items-center justify-center">
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
+
+              <AnimatePresence>
+                {isNotificationOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden z-50"
+                  >
+                    <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+                      <h4 className="font-bold text-slate-900">Notifications</h4>
+                      <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full uppercase">
+                        {unreadCount} New
+                      </span>
+                    </div>
+                    <div className="max-h-96 overflow-y-auto divide-y divide-slate-50">
+                      {notifications.length === 0 ? (
+                        <div className="p-8 text-center text-slate-400">
+                          <Bell className="mx-auto mb-2 opacity-20" size={32} />
+                          <p className="text-xs">No notifications yet</p>
+                        </div>
+                      ) : (
+                        notifications.map((n) => (
+                          <div 
+                            key={n.id} 
+                            onClick={() => {
+                              markAsRead(n.id);
+                              setIsNotificationOpen(false);
+                            }}
+                            className={cn(
+                              "p-4 hover:bg-slate-50 transition-colors cursor-pointer",
+                              !n.read && "bg-blue-50/30"
+                            )}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className={cn(
+                                "w-2 h-2 rounded-full mt-1.5 shrink-0",
+                                n.type === 'ALERT' ? "bg-red-500" : n.type === 'SUCCESS' ? "bg-emerald-500" : "bg-blue-500"
+                              )} />
+                              <div>
+                                <p className="text-sm font-bold text-slate-900">{n.title}</p>
+                                <p className="text-xs text-slate-600 mt-0.5">{n.message}</p>
+                                <p className="text-[10px] text-slate-400 mt-1">
+                                  {new Date(n.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+            
             <div className="flex items-center gap-3 pl-4 border-l border-slate-200">
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-semibold text-slate-800">{user?.name}</p>

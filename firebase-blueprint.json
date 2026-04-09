@@ -1,0 +1,110 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User profile information and role-based access control.",
+      "type": "object",
+      "properties": {
+        "username": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string", "enum": ["ADMIN", "CLINICAL", "CHW"] },
+        "clinic": { "type": "string" },
+        "status": { "type": "string", "enum": ["APPROVED", "PENDING"] },
+        "email": { "type": "string", "format": "email" },
+        "uid": { "type": "string" }
+      },
+      "required": ["username", "name", "role", "status", "uid"]
+    },
+    "Patient": {
+      "title": "Patient Record",
+      "description": "Patient health record and assignment details.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "age": { "type": "string" },
+        "gender": { "type": "string" },
+        "clinic": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "address": { "type": "string" },
+        "sector": { "type": "string" },
+        "allergies": { "type": "string" },
+        "medications": { "type": "string" },
+        "registeredAt": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["Normal", "At Risk", "Critical"] },
+        "assignedCHW": { "type": "string" },
+        "followUps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "date": { "type": "string", "format": "date-time" },
+              "officer": { "type": "string" },
+              "notes": { "type": "string" },
+              "status": { "type": "string", "enum": ["Completed", "Missed", "Scheduled"] }
+            }
+          }
+        }
+      },
+      "required": ["name", "age", "gender", "clinic", "phone", "address", "registeredAt", "status"]
+    },
+    "Post": {
+      "title": "Community Post",
+      "description": "A post shared in the community section.",
+      "type": "object",
+      "properties": {
+        "author": { "type": "string" },
+        "authorUsername": { "type": "string" },
+        "authorUid": { "type": "string" },
+        "role": { "type": "string" },
+        "initial": { "type": "string" },
+        "content": { "type": "string" },
+        "timestamp": { "type": "number" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "likes": { "type": "number" },
+        "comments": { "type": "number" },
+        "media": {
+          "type": "object",
+          "properties": {
+            "type": { "type": "string", "enum": ["image", "video"] },
+            "url": { "type": "string" }
+          }
+        }
+      },
+      "required": ["author", "authorUid", "timestamp"]
+    },
+    "Notification": {
+      "title": "User Notification",
+      "description": "A notification for a specific user.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "type": { "type": "string", "enum": ["INFO", "ALERT", "SUCCESS"] },
+        "read": { "type": "boolean" },
+        "timestamp": { "type": "number" }
+      },
+      "required": ["userId", "title", "message", "read", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles indexed by their Firebase Auth UID."
+    },
+    "/patients/{patientId}": {
+      "schema": "Patient",
+      "description": "Patient records shared across the clinic."
+    },
+    "/posts/{postId}": {
+      "schema": "Post",
+      "description": "Community posts shared across all users."
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "User-specific notifications."
+    }
+  }
+}

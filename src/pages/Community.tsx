@@ -18,16 +18,27 @@ import {
   Clock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useAuth } from '../context/AuthContext';
+import { 
+  collection, 
+  onSnapshot, 
+  addDoc, 
+  updateDoc, 
+  doc, 
+  query, 
+  orderBy,
+  increment
+} from 'firebase/firestore';
+import { db } from '../firebase';
+import { useAuth, handleFirestoreError } from '../context/AuthContext';
 
 interface Post {
   id: string;
   author: string;
   authorUsername: string;
+  authorUid: string;
   role: string;
   initial: string;
   content: string;
-  time: string;
   timestamp: number;
   tags: string[];
   likes: number;
@@ -38,13 +49,28 @@ interface Post {
   };
 }
 
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+function formatTime(timestamp: number) {
+  const now = Date.now();
+  const diff = now - timestamp;
+  
+  if (diff < 60000) return 'Just now';
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+  return new Date(timestamp).toLocaleDateString();
+}
+
 export default function Community() {
   const { user } = useAuth();
-  const [posts, setPosts] = React.useState<Post[]>(() => {
-    const saved = localStorage.getItem('mdeka_community_posts');
-    return saved ? JSON.parse(saved) : [];
-  });
-  
+  const [posts, setPosts] = React.useState<Post[]>([]);
   const [newPostContent, setNewPostContent] = React.useState('');
   const [selectedMedia, setSelectedMedia] = React.useState<{ type: 'image' | 'video', url: string } | null>(null);
   const [isPosting, setIsPosting] = React.useState(false);
@@ -52,8 +78,28 @@ export default function Community() {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
-    localStorage.setItem('mdeka_community_posts', JSON.stringify(posts));
-  }, [posts]);
+    if (!user) {
+      setPosts([]);
+      return;
+    }
+
+    const q = query(collection(db, 'posts'), orderBy('timestamp', 'desc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const postsList = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Post[];
+      setPosts(postsList);
+    }, (error) => {
+      if (error.message.includes('insufficient permissions')) {
+        console.warn('Community posts subscription: Insufficient permissions.');
+        return;
+      }
+      handleFirestoreError(error, OperationType.LIST, 'posts');
+    });
+
+    return () => unsubscribe();
+  }, [user]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -61,7 +107,6 @@ export default function Community() {
 
     setError(null);
 
-    // Check file type
     const isImage = file.type.startsWith('image/');
     const isVideo = file.type.startsWith('video/');
 
@@ -70,13 +115,12 @@ export default function Community() {
       return;
     }
 
-    // For videos, check duration (approximate check via metadata)
     if (isVideo) {
       const video = document.createElement('video');
       video.preload = 'metadata';
       video.onloadedmetadata = () => {
         window.URL.revokeObjectURL(video.src);
-        if (video.duration > 31) { // Allowing a small buffer
+        if (video.duration > 31) {
           setError('Videos must be 30 seconds or shorter.');
           setSelectedMedia(null);
         }
@@ -94,36 +138,46 @@ export default function Community() {
     reader.readAsDataURL(file);
   };
 
-  const handleCreatePost = () => {
+  const handleCreatePost = async () => {
     if (!newPostContent.trim() && !selectedMedia) return;
+    if (!user) return;
     
     setIsPosting(true);
     
-    const newPost: Post = {
-      id: Math.random().toString(36).substr(2, 9),
-      author: user?.name || 'Anonymous',
-      authorUsername: user?.username || 'anonymous',
-      role: user?.role || 'User',
-      initial: (user?.name || 'A').split(' ').map(n => n[0]).join(''),
+    const newPostData = {
+      author: user.name,
+      authorUsername: user.username,
+      authorUid: user.uid,
+      role: user.role,
+      initial: user.name.split(' ').map(n => n[0]).join(''),
       content: newPostContent,
-      time: 'Just now',
       timestamp: Date.now(),
       tags: [],
       likes: 0,
       comments: 0,
-      media: selectedMedia || undefined
+      media: selectedMedia || null
     };
 
-    // Simulate network delay
-    setTimeout(() => {
-      setPosts(prev => [newPost, ...prev]);
+    try {
+      await addDoc(collection(db, 'posts'), newPostData);
       setNewPostContent('');
       setSelectedMedia(null);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'posts');
+    } finally {
       setIsPosting(false);
-    }, 800);
+    }
   };
 
-  const sortedPosts = [...posts].sort((a, b) => b.timestamp - a.timestamp);
+  const handleLike = async (postId: string) => {
+    try {
+      await updateDoc(doc(db, 'posts', postId), {
+        likes: increment(1)
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `posts/${postId}`);
+    }
+  };
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -220,13 +274,13 @@ export default function Community() {
 
         {/* Feed */}
         <div className="space-y-6">
-          {sortedPosts.length === 0 ? (
+          {posts.length === 0 ? (
             <div className="bg-white p-12 rounded-3xl border border-slate-200 shadow-sm text-center">
               <MessageSquare className="mx-auto text-slate-200 mb-4" size={48} />
               <p className="text-slate-500 font-medium">No posts yet. Be the first to share something!</p>
             </div>
           ) : (
-            sortedPosts.map((post, i) => (
+            posts.map((post, i) => (
             <motion.div 
               key={post.id}
               initial={{ opacity: 0, y: 20 }}
@@ -241,7 +295,7 @@ export default function Community() {
                   </div>
                   <div>
                     <h4 className="font-bold text-slate-900">{post.author}</h4>
-                    <p className="text-xs text-slate-500 font-medium">{post.role} • {post.time}</p>
+                    <p className="text-xs text-slate-500 font-medium">{post.role} • {formatTime(post.timestamp)}</p>
                   </div>
                 </div>
                 <button className="p-2 hover:bg-slate-50 rounded-lg text-slate-400">
@@ -281,7 +335,10 @@ export default function Community() {
 
               <div className="flex items-center justify-between pt-6 border-t border-slate-100">
                 <div className="flex gap-6">
-                  <button className="flex items-center gap-2 text-slate-500 hover:text-blue-600 transition-colors font-medium">
+                  <button 
+                    onClick={() => handleLike(post.id)}
+                    className="flex items-center gap-2 text-slate-500 hover:text-blue-600 transition-colors font-medium"
+                  >
                     <ThumbsUp size={20} /> {post.likes}
                   </button>
                   <button className="flex items-center gap-2 text-slate-500 hover:text-blue-600 transition-colors font-medium">
