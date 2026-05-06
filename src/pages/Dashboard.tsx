@@ -42,10 +42,10 @@ export default function Dashboard() {
   ];
 
   const clinicStats = [
-    { label: 'NCD Clinic', value: patients.filter(p => p.clinic === 'NCD').length.toString(), icon: Activity, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: 'Epilepsy Clinic', value: patients.filter(p => p.clinic === 'Epilepsy').length.toString(), icon: ShieldCheck, color: 'text-purple-600', bg: 'bg-purple-50' },
-    { label: 'Malaria Positive', value: patients.filter(p => p.clinic === 'Malaria').length.toString(), icon: AlertCircle, color: 'text-orange-600', bg: 'bg-orange-50' },
-    { label: 'Under Five (Vaccinated)', value: patients.filter(p => p.clinic === 'UnderFive').length.toString(), icon: HeartPulse, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { label: 'NCD Clinic', value: patients.filter(p => (p.department || p.clinic) === 'NCD').length.toString(), icon: Activity, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { label: 'Epilepsy Clinic', value: patients.filter(p => (p.department || p.clinic) === 'Epilepsy').length.toString(), icon: ShieldCheck, color: 'text-purple-600', bg: 'bg-purple-50' },
+    { label: 'Malaria Positive', value: patients.filter(p => (p.department || p.clinic) === 'Malaria').length.toString(), icon: AlertCircle, color: 'text-orange-600', bg: 'bg-orange-50' },
+    { label: 'Under Five (Vaccinated)', value: patients.filter(p => (p.department || p.clinic) === 'UnderFive').length.toString(), icon: HeartPulse, color: 'text-emerald-600', bg: 'bg-emerald-50' },
   ];
 
   // Group patients by month for the line chart
@@ -57,7 +57,14 @@ export default function Dashboard() {
 
   const patientGrowthData = last7Months.map(month => ({
     name: month,
-    patients: patients.filter(p => new Date(p.registeredAt).toLocaleString('default', { month: 'short' }) === month).length
+    patients: patients.filter(p => {
+      if (!p.registeredAt) return false;
+      try {
+        return new Date(p.registeredAt).toLocaleString('default', { month: 'short' }) === month;
+      } catch (e) {
+        return false;
+      }
+    }).length
   }));
 
   return (

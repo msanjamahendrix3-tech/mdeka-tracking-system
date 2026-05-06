@@ -26,21 +26,23 @@ export default function AddPatient() {
     name: '',
     age: '',
     gender: 'Male',
-    clinic: 'General',
+    department: 'General',
     phone: '',
     email: '',
     address: '',
     sector: '',
     allergies: '',
     medications: '',
-    assignedCHW: ''
+    assignedCHW: '',
+    ncdRegNumber: '',
+    bpMeasurement: ''
   });
 
   const chws = allUsers.filter(u => u.role === 'CHW' && u.status === 'APPROVED');
 
   // Automatically suggest CHW for Malaria cases
   React.useEffect(() => {
-    if (formData.clinic === 'Malaria' && !formData.assignedCHW) {
+    if (formData.department === 'Malaria' && !formData.assignedCHW) {
       // 1. Check if a patient with same phone exists (already assigned CHW)
       const existingPatient = patients.find(p => p.phone === formData.phone && p.assignedCHW);
       if (existingPatient) {
@@ -59,7 +61,7 @@ export default function AddPatient() {
         }
       }
     }
-  }, [formData.clinic, formData.sector, formData.phone, user?.role, user?.name, chws.length, patients]);
+  }, [formData.department, formData.sector, formData.phone, user?.role, user?.name, chws.length, patients]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,13 +78,16 @@ export default function AddPatient() {
         name: '',
         age: '',
         gender: 'Male',
-        clinic: 'General',
+        department: 'General',
         phone: '',
         email: '',
         address: '',
+        sector: '',
         allergies: '',
         medications: '',
-        assignedCHW: ''
+        assignedCHW: '',
+        ncdRegNumber: '',
+        bpMeasurement: ''
       });
       
       setTimeout(() => setIsSuccess(false), 3000);
@@ -144,10 +149,10 @@ export default function AddPatient() {
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700">Clinic / Department</label>
+              <label className="text-sm font-semibold text-slate-700">Department / Case Type</label>
               <select 
-                value={formData.clinic}
-                onChange={(e) => setFormData({...formData, clinic: e.target.value})}
+                value={formData.department}
+                onChange={(e) => setFormData({...formData, department: e.target.value})}
                 className="w-full px-4 py-3 bg-slate-50 border-slate-200 rounded-xl focus:bg-white focus:border-blue-500 focus:ring-0 transition-all"
               >
                 <option value="General">General Clinic</option>
@@ -170,22 +175,64 @@ export default function AddPatient() {
           </div>
         </div>
 
-        {/* Care Coordination & CHW Assignment */}
+        <AnimatePresence>
+          {formData.department === 'NCD' && (
+            <motion.div 
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="bg-blue-50 p-8 rounded-3xl border border-blue-100 shadow-sm space-y-6 mb-8">
+                <div className="flex items-center gap-2 text-blue-700 font-bold uppercase tracking-wider text-xs">
+                  <HeartPulse size={16} /> NCD Specific Details
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-slate-700">NCD Registration Number</label>
+                    <input 
+                      type="text" 
+                      value={formData.ncdRegNumber}
+                      onChange={(e) => setFormData({...formData, ncdRegNumber: e.target.value})}
+                      placeholder="e.g. NCD-2024-001" 
+                      className="w-full px-4 py-3 bg-white border-blue-200 rounded-xl focus:border-blue-500 focus:ring-0 transition-all font-mono"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-slate-700">Blood Pressure (BP) Measurement</label>
+                    <div className="relative">
+                      <HeartPulse className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                      <input 
+                        type="text" 
+                        value={formData.bpMeasurement}
+                        onChange={(e) => setFormData({...formData, bpMeasurement: e.target.value})}
+                        placeholder="e.g. 120/80" 
+                        className="w-full pl-12 pr-4 py-3 bg-white border-blue-200 rounded-xl focus:border-blue-500 focus:ring-0 transition-all"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <div className={`p-8 rounded-3xl border shadow-sm space-y-6 transition-all duration-500 ${
-          formData.clinic === 'Malaria' 
+          formData.department === 'Malaria' 
             ? 'bg-orange-50 border-orange-200' 
             : 'bg-white border-slate-200'
         }`}>
           <div className={`flex items-center gap-2 font-bold uppercase tracking-wider text-xs ${
-            formData.clinic === 'Malaria' ? 'text-orange-600' : 'text-blue-600'
+            formData.department === 'Malaria' ? 'text-orange-600' : 'text-blue-600'
           }`}>
-            <MapPin size={16} /> {formData.clinic === 'Malaria' ? 'Home Follow-up Assignment (Malaria Case)' : 'Care Coordination'}
+            <MapPin size={16} /> {formData.department === 'Malaria' ? 'Home Follow-up Assignment (Malaria Case)' : 'Care Coordination'}
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <label className={`text-sm font-semibold ${
-                formData.clinic === 'Malaria' ? 'text-orange-800' : 'text-slate-700'
+                formData.department === 'Malaria' ? 'text-orange-800' : 'text-slate-700'
               }`}>
                 Assign Community Health Worker (CHW)
               </label>
@@ -193,7 +240,7 @@ export default function AddPatient() {
                 value={formData.assignedCHW}
                 onChange={(e) => setFormData({...formData, assignedCHW: e.target.value})}
                 className={`w-full px-4 py-3 rounded-xl focus:ring-0 transition-all ${
-                  formData.clinic === 'Malaria' 
+                  formData.department === 'Malaria' 
                     ? 'bg-white border-orange-200 focus:border-orange-500' 
                     : 'bg-slate-50 border-slate-200 focus:bg-white focus:border-blue-500'
                 }`}
@@ -208,7 +255,7 @@ export default function AddPatient() {
             </div>
 
             <AnimatePresence>
-              {formData.clinic === 'Malaria' && (
+              {formData.department === 'Malaria' && (
                 <motion.div 
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -226,7 +273,7 @@ export default function AddPatient() {
             </AnimatePresence>
           </div>
 
-          {formData.clinic === 'Malaria' && (
+          {formData.department === 'Malaria' && (
             <p className="text-xs text-orange-700 italic">
               Note: Malaria positive cases require a mandatory home address verification and follow-up assignment.
             </p>

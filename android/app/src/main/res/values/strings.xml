@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Mdeka Health Tracker</string>
+    <string name="title_activity_main">Mdeka Health Tracker</string>
+    <string name="package_name">com.mdeka.health</string>
+    <string name="custom_url_scheme">com.mdeka.health</string>
+</resources>

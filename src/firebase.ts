@@ -1,42 +1,38 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore, doc, getDocFromServer, enableIndexedDbPersistence } from 'firebase/firestore';
+import { 
+  initializeFirestore, 
+  persistentLocalCache
+} from 'firebase/firestore';
 
 // Import the Firebase configuration
 import firebaseConfig from '../firebase-applet-config.json';
 
 // Initialize Firebase SDK
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+
+// Initialize Firestore with persistent cache
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({})
+}, firebaseConfig.firestoreDatabaseId);
+
 export const auth = getAuth(app);
 
-// Enable Offline Persistence
-if (typeof window !== 'undefined') {
-  enableIndexedDbPersistence(db).catch((err) => {
-    if (err.code === 'failed-precondition') {
-      // Multiple tabs open, persistence can only be enabled in one tab at a a time.
-      console.warn('Firestore persistence failed: Multiple tabs open');
-    } else if (err.code === 'unimplemented') {
-      // The current browser does not support all of the features required to enable persistence
-      console.warn('Firestore persistence failed: Browser not supported');
-    }
-  });
-}
-
-// Validate Connection to Firestore
+// Test connection to Firestore
+import { doc, getDocFromCache, getDocFromServer } from 'firebase/firestore';
 async function testConnection() {
   try {
-    // Attempt to fetch a non-existent document to test connection
-    await getDocFromServer(doc(db, '_internal', 'connection_test'));
-    console.log("Firebase connection established successfully.");
+    // Try to get a non-existent doc from server to verify connectivity
+    await getDocFromServer(doc(db, '_connection_test_', 'ping'));
+    console.log("Firestore connection successful.");
   } catch (error) {
     if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.error("Please check your Firebase configuration. The client is offline.");
+      console.error("Firestore connection failed: The client is offline. Please check your Firebase configuration or internet connection.");
+    } else {
+      console.log("Firestore connection test completed (ignoring non-offline errors).");
     }
-    // Skip logging for other errors, as this is simply a connection test.
   }
 }
-
 testConnection();
 
 export default app;

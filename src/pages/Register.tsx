@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth, UserRole } from '../context/AuthContext';
-import { Stethoscope, User, UserPlus, Building2, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
+import { useAuth, UserRole, Clinic } from '../context/AuthContext';
+import { Stethoscope, User, UserPlus, Building2, ArrowLeft, CheckCircle2, AlertCircle, Lock, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'motion/react';
 
 export default function Register() {
@@ -11,13 +11,31 @@ export default function Register() {
     username: '',
     name: '',
     role: 'CLINICAL' as UserRole,
-    clinic: ''
+    clinic: '',
+    clinicId: '',
+    clinicCode: '',
+    clinicAddress: ''
   });
   const [error, setError] = React.useState('');
   const [isSubmitted, setIsSubmitted] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
-  const { registerWithEmail, isAuthenticated, isAuthReady } = useAuth();
+  const [showPassword, setShowPassword] = React.useState(false);
+  const [availableClinics, setAvailableClinics] = React.useState<Clinic[]>([]);
+  const { registerWithEmail, getPublicClinics, isAuthenticated, isAuthReady } = useAuth();
   const navigate = useNavigate();
+
+  React.useEffect(() => {
+    const fetchClinics = async () => {
+      try {
+        const clinics = await getPublicClinics();
+        setAvailableClinics(clinics || []);
+      } catch (err) {
+        console.error('Error fetching clinics:', err);
+        setError('Could not connect to Health Center list. Please check your internet.');
+      }
+    };
+    fetchClinics();
+  }, [getPublicClinics]);
 
   React.useEffect(() => {
     if (isAuthReady && isAuthenticated) {
@@ -30,14 +48,78 @@ export default function Register() {
     setError('');
     setIsLoading(true);
     
-    const { email, password, ...profileData } = formData;
-    const result = await registerWithEmail(email, password, profileData);
-    
-    setIsLoading(false);
-    if (result.success) {
-      setIsSubmitted(true);
-    } else {
-      setError(result.message || 'Registration failed.');
+    try {
+      const { email: rawEmail, password, ...profileData } = formData;
+      const email = rawEmail.trim().toLowerCase();
+      
+      let clinicDataPayload = undefined;
+      
+      if (formData.role === 'ADMIN') {
+        if (!formData.clinic) {
+          setError('Clinic name is required.');
+          setIsLoading(false);
+          return;
+        }
+        // Generate a reliable 6-digit numeric code
+        const charset = '0123456789';
+        let clinicCode = '';
+        for (let i = 0; i < 6; i++) {
+          clinicCode += charset.charAt(Math.floor(Math.random() * charset.length));
+        }
+        
+        clinicDataPayload = {
+          name: formData.clinic,
+          address: formData.clinicAddress,
+          code: clinicCode
+        };
+      } else {
+        // Staff joining clinic
+        if (!formData.clinicId) {
+          setError('Please select your Health Center/Clinic from the menu.');
+          setIsLoading(false);
+          return;
+        }
+        if (!formData.clinicCode) {
+          setError('Staff Join Code is required.');
+          setIsLoading(false);
+          return;
+        }
+
+        const selectedClinic = availableClinics.find(c => c.id === formData.clinicId);
+        if (!selectedClinic) {
+          setError('Selected clinic not found. Please refresh and try again.');
+          setIsLoading(false);
+          return;
+        }
+
+        // Verify the code matches exactly for THIS clinic
+        if (selectedClinic.code !== formData.clinicCode) {
+          setError('Invalid Join Code for the selected Health Center. Please check with your administrator.');
+          setIsLoading(false);
+          return;
+        }
+
+        profileData.clinicId = selectedClinic.id;
+        profileData.clinic = selectedClinic.name;
+      }
+
+      const result = await registerWithEmail(email, password, profileData, clinicDataPayload);
+      
+      if (result.success) {
+        setIsSubmitted(true);
+      } else {
+        // Specifically check for permission denied errors which might indicate rules or config issues
+        if (result.message?.includes('insufficient permissions')) {
+          setError('Security check failed. Please ensure your clinic configuration is correct or contact HASTINGS MSANJAMA.');
+        } else {
+          setError(result.message || 'Registration failed. Please try again.');
+        }
+      }
+    } catch (err: any) {
+      console.error('Submit handle error:', err);
+      setError(err.message || 'An unexpected error occurred. Please check your internet connection.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -114,14 +196,23 @@ export default function Register() {
 
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-slate-700">Password</label>
-                <input 
-                  required
-                  type="password" 
-                  value={formData.password}
-                  onChange={(e) => setFormData({...formData, password: e.target.value})}
-                  placeholder="••••••••" 
-                  className="w-full px-4 py-3 bg-slate-50 border-slate-200 rounded-xl focus:bg-white focus:border-blue-500 focus:ring-0 transition-all"
-                />
+                <div className="relative">
+                  <input 
+                    required
+                    type={showPassword ? "text" : "password"} 
+                    value={formData.password}
+                    onChange={(e) => setFormData({...formData, password: e.target.value})}
+                    placeholder="••••••••" 
+                    className="w-full px-4 py-3 bg-slate-50 border-slate-200 rounded-xl focus:bg-white focus:border-blue-500 focus:ring-0 transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -161,24 +252,82 @@ export default function Register() {
                 >
                   <option value="CLINICAL">Nurse / Clinician / Doctor</option>
                   <option value="CHW">Community Health Worker</option>
-                  <option value="ADMIN">System Administrator</option>
+                  <option value="ADMIN">Clinic Owner / Manager (New Clinic)</option>
                 </select>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Clinic / Sector</label>
-                <div className="relative">
-                  <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                  <input 
-                    required
-                    type="text" 
-                    value={formData.clinic}
-                    onChange={(e) => setFormData({...formData, clinic: e.target.value})}
-                    placeholder="e.g. Sector 4" 
-                    className="w-full pl-12 pr-4 py-3 bg-slate-50 border-slate-200 rounded-xl focus:bg-white focus:border-blue-500 focus:ring-0 transition-all"
-                  />
-                </div>
-              </div>
+              {formData.role === 'ADMIN' ? (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-slate-700">New Clinic Name</label>
+                    <div className="relative">
+                      <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                      <input 
+                        required
+                        type="text" 
+                        value={formData.clinic}
+                        onChange={(e) => setFormData({...formData, clinic: e.target.value})}
+                        placeholder="e.g. Mdeka Health Centre" 
+                        className="w-full pl-12 pr-4 py-3 bg-slate-50 border-slate-200 rounded-xl focus:bg-white focus:border-blue-500 focus:ring-0 transition-all font-medium"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-slate-700">Location / Address</label>
+                    <input 
+                      required
+                      type="text" 
+                      value={formData.clinicAddress}
+                      onChange={(e) => setFormData({...formData, clinicAddress: e.target.value})}
+                      placeholder="e.g. Blantyre, Malawi" 
+                      className="w-full px-4 py-3 bg-slate-50 border-slate-200 rounded-xl focus:bg-white focus:border-blue-500 focus:ring-0 transition-all"
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-slate-700">Select Health Center</label>
+                    <div className="relative">
+                      <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                      <select
+                        required
+                        value={formData.clinicId}
+                        onChange={(e) => setFormData({...formData, clinicId: e.target.value})}
+                        className="w-full pl-12 pr-4 py-3 bg-slate-50 border-slate-200 rounded-xl focus:bg-white focus:border-blue-500 focus:ring-0 transition-all font-medium appearance-none"
+                      >
+                        <option value="">Choose a Facility...</option>
+                        {availableClinics.map(clinic => (
+                          <option key={clinic.id} value={clinic.id}>
+                            {clinic.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {availableClinics.length === 0 && (
+                      <p className="text-[10px] text-amber-600 font-medium">
+                        No facilities found. Please wait or register a new one.
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-slate-700">Staff Join Code</label>
+                    <div className="relative">
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                      <input 
+                        required
+                        type="text" 
+                        value={formData.clinicCode}
+                        onChange={(e) => setFormData({...formData, clinicCode: e.target.value.replace(/\D/g, '').slice(0, 6)})}
+                        placeholder="Enter 6-digit number" 
+                        className="w-full pl-12 pr-4 py-3 bg-slate-50 border-slate-200 rounded-xl focus:bg-white focus:border-blue-500 focus:ring-0 transition-all font-mono tracking-widest text-lg"
+                        maxLength={6}
+                      />
+                    </div>
+                    <p className="text-[10px] text-slate-400 font-medium italic">Enter the 6-digit numeric code provided by your Health Center admin.</p>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100 flex gap-3">
@@ -200,6 +349,14 @@ export default function Register() {
               )}
             </button>
           </form>
+          <div className="p-6 bg-slate-50 border-t border-slate-100 text-center space-y-3">
+            <p className="text-sm text-slate-500">
+              Already have an account? <Link to="/login" className="text-blue-600 font-bold hover:underline">Sign in</Link>
+            </p>
+            <p className="text-xs text-slate-400">
+              Need to register a new facility? <Link to="/register-clinic" className="text-blue-600 font-bold hover:underline">Register Clinic/Hospital</Link>
+            </p>
+          </div>
         </div>
       </motion.div>
     </div>

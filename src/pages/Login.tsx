@@ -1,15 +1,19 @@
 import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Stethoscope, AlertCircle, User, Lock } from 'lucide-react';
-import { motion } from 'motion/react';
+import { Stethoscope, AlertCircle, User, Lock, X, CheckCircle2, Eye, EyeOff } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 
 export default function Login() {
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [error, setError] = React.useState('');
   const [isLoading, setIsLoading] = React.useState(false);
-  const { loginWithEmail, isAuthenticated, isAuthReady } = useAuth();
+  const [showPassword, setShowPassword] = React.useState(false);
+  const [showForgotModal, setShowForgotModal] = React.useState(false);
+  const [resetEmail, setResetEmail] = React.useState('');
+  const [resetStatus, setResetStatus] = React.useState<{ type: 'success' | 'error', msg: string } | null>(null);
+  const { login, loginWithEmail, requestPasswordReset, isAuthenticated, isAuthReady } = useAuth();
   const navigate = useNavigate();
 
   React.useEffect(() => {
@@ -32,6 +36,45 @@ export default function Login() {
       }
     } catch (err) {
       setError('An unexpected error occurred.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResetRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetStatus(null);
+    setIsLoading(true);
+    try {
+      const result = await requestPasswordReset(resetEmail);
+      if (result.success) {
+        setResetStatus({ type: 'success', msg: result.message || 'Request submitted successfully.' });
+      } else {
+        setResetStatus({ type: 'error', msg: result.message || 'Failed to submit request.' });
+      }
+    } catch (err) {
+      setResetStatus({ type: 'error', msg: 'An unexpected error occurred.' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setError('');
+    setIsLoading(true);
+    try {
+      const result = await login();
+      if (result.success) {
+        if (result.message === 'NEW_USER') {
+          navigate('/register');
+        } else {
+          navigate('/');
+        }
+      } else {
+        setError(result.message || 'Google login failed.');
+      }
+    } catch (err) {
+      setError('An unexpected error occurred during Google login.');
     } finally {
       setIsLoading(false);
     }
@@ -67,38 +110,69 @@ export default function Login() {
               </motion.div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Email / Username</label>
-                <div className="relative">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                  <input 
-                    required
-                    type="email" 
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="name@example.com" 
-                    className="w-full pl-12 pr-4 py-3 bg-slate-50 border-slate-200 rounded-xl focus:bg-white focus:border-blue-500 focus:ring-0 transition-all"
-                  />
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <label htmlFor="email" className="text-sm font-semibold text-slate-700">Email Address</label>
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <input 
+                      id="email"
+                      name="email"
+                      required
+                      type="email" 
+                      autoComplete="username"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="name@example.com" 
+                      className="w-full pl-12 pr-4 py-3 bg-slate-50 border-slate-200 rounded-xl focus:bg-white focus:border-blue-500 focus:ring-0 transition-all"
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Password</label>
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                  <input 
-                    required
-                    type="password" 
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••" 
-                    className="w-full pl-12 pr-4 py-3 bg-slate-50 border-slate-200 rounded-xl focus:bg-white focus:border-blue-500 focus:ring-0 transition-all"
-                  />
+                <div className="space-y-2">
+                  <label htmlFor="password" className="text-sm font-semibold text-slate-700">Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <input 
+                      id="password"
+                      name="password"
+                      required
+                      type={showPassword ? "text" : "password"} 
+                      autoComplete="current-password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••" 
+                      className="w-full pl-12 pr-12 py-3 bg-slate-50 border-slate-200 rounded-xl focus:bg-white focus:border-blue-500 focus:ring-0 transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                 </div>
-              </div>
 
-              <button 
+                <div className="flex items-center justify-between py-2">
+                  <div className="flex items-center gap-2">
+                    <input 
+                      type="checkbox" 
+                      id="remember" 
+                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <label htmlFor="remember" className="text-xs font-medium text-slate-500 cursor-pointer">Remember me</label>
+                  </div>
+                  <button 
+                    type="button" 
+                    onClick={() => setShowForgotModal(true)}
+                    className="text-xs font-bold text-blue-600 hover:underline"
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
+
+                <button 
                 type="submit"
                 disabled={isLoading}
                 className="w-full py-4 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
@@ -111,14 +185,119 @@ export default function Login() {
               </button>
             </form>
 
-            <div className="text-center pt-4 border-t border-slate-100">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-100"></div>
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-2 text-slate-400 font-semibold">Or continue with</span>
+              </div>
+            </div>
+
+            <button 
+              type="button"
+              onClick={handleGoogleLogin}
+              disabled={isLoading}
+              className="w-full py-3 bg-white border border-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-50 transition-all flex items-center justify-center gap-3 shadow-sm"
+            >
+              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
+              Sign in with Google
+            </button>
+
+            <div className="text-center pt-4 border-t border-slate-100 space-y-4">
               <p className="text-sm text-slate-500">
                 New user? <Link to="/register" className="text-blue-600 font-bold hover:underline">Sign up for an account</Link>
               </p>
+              <p className="text-xs text-slate-500">
+                Hospital or Clinic? <Link to="/register-clinic" className="text-blue-600 font-bold hover:underline">Register your facility</Link>
+              </p>
+              <p className="text-[10px] text-slate-400 max-w-xs mx-auto">
+                Each account is tied to a specific Health Clinic or Hospital context.
+              </p>
+              <div className="pt-2">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Powered by</p>
+                <p className="text-xs font-bold text-slate-600">HASTINGS MSANJAMA</p>
+              </div>
             </div>
           </div>
         </div>
       </motion.div>
+
+      {/* Forgot Password Modal */}
+      <AnimatePresence>
+        {showForgotModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md p-8 relative"
+            >
+              <button 
+                onClick={() => {
+                  setShowForgotModal(false);
+                  setResetStatus(null);
+                  setResetEmail('');
+                }}
+                className="absolute top-6 right-6 p-2 hover:bg-slate-100 rounded-full text-slate-400 transition-colors"
+              >
+                <X size={20} />
+              </button>
+
+              <div className="space-y-6">
+                <div className="text-center space-y-2">
+                  <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <Lock size={24} />
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-900">Forgot Password?</h3>
+                  <p className="text-sm text-slate-500">
+                    Enter your email to request a password reset approval from your clinic administrator.
+                  </p>
+                </div>
+
+                {resetStatus && (
+                  <div className={`p-4 rounded-xl flex items-center gap-3 text-sm ${
+                    resetStatus.type === 'success' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-red-50 text-red-600 border border-red-100'
+                  }`}>
+                    {resetStatus.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+                    {resetStatus.msg}
+                  </div>
+                )}
+
+                {!resetStatus?.type || resetStatus.type === 'error' ? (
+                  <form onSubmit={handleResetRequest} className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-slate-700">Work Email</label>
+                      <input 
+                        required
+                        type="email"
+                        value={resetEmail}
+                        onChange={(e) => setResetEmail(e.target.value)}
+                        placeholder="your@email.com"
+                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-blue-500 transition-all outline-none"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={isLoading}
+                      className="w-full py-4 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all disabled:opacity-50"
+                    >
+                      {isLoading ? 'Submitting...' : 'Request Reset Approval'}
+                    </button>
+                  </form>
+                ) : (
+                  <button
+                    onClick={() => setShowForgotModal(false)}
+                    className="w-full py-4 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-all"
+                  >
+                    Got it
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

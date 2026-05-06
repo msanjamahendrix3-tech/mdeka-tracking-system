@@ -1,0 +1,6 @@
+{
+	"appId": "com.mdeka.health",
+	"appName": "Mdeka Health Tracker",
+	"webDir": "dist",
+	"packageClassList": []
+}

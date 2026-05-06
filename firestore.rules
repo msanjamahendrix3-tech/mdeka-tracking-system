@@ -1,193 +1,121 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
     // ===============================================================
-    // Assumed Data Model
+    // 0. Global Safety Net
     // ===============================================================
-    //
-    // Collection: users
-    // Document ID: userId (Auth UID)
-    // Fields:
-    //   - username: string (required, < 50 chars)
-    //   - name: string (required, < 100 chars)
-    //   - role: string (required, enum: ADMIN, CLINICAL, CHW)
-    //   - clinic: string (optional, < 100 chars)
-    //   - status: string (required, enum: APPROVED, PENDING)
-    //   - email: string (optional, format: email)
-    //   - uid: string (required, matches Auth UID)
-    //
-    // Collection: patients
-    // Document ID: patientId
-    // Fields:
-    //   - name: string (required, < 100 chars)
-    //   - age: string (required, < 10 chars)
-    //   - gender: string (required, < 10 chars)
-    //   - clinic: string (required, < 100 chars)
-    //   - phone: string (required, < 20 chars)
-    //   - email: string (optional, < 100 chars)
-    //   - address: string (required, < 200 chars)
-    //   - sector: string (optional, < 100 chars)
-    //   - allergies: string (optional, < 500 chars)
-    //   - medications: string (optional, < 500 chars)
-    //   - registeredAt: string (required, date-time)
-    //   - status: string (required, enum: Normal, At Risk, Critical)
-    //   - assignedCHW: string (optional, < 100 chars)
-    //   - followUps: list (optional, < 100 items)
-    //
-    // Collection: posts
-    // Document ID: postId
-    // Fields:
-    //   - author: string (required, < 100 chars)
-    //   - authorUsername: string (required, < 50 chars)
-    //   - authorUid: string (required, matches Auth UID)
-    //   - role: string (required, < 50 chars)
-    //   - initial: string (required, < 5 chars)
-    //   - content: string (required, < 2000 chars)
-    //   - timestamp: number (required)
-    //   - tags: list (optional, < 10 items)
-    //   - likes: number (required)
-    //   - comments: number (required)
-    //   - media: map (optional)
-    //
-    // Collection: notifications
-    // Document ID: notificationId
-    // Fields:
-    //   - userId: string (required, matches Auth UID)
-    //   - title: string (required, < 100 chars)
-    //   - message: string (required, < 500 chars)
-    //   - type: string (required, enum: INFO, ALERT, SUCCESS)
-    //   - read: bool (required)
-    //   - timestamp: number (required)
-    //
-    // ===============================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
 
     // ===============================================================
-    // Helper Functions
+    // 1. Helper Primitives
     // ===============================================================
+    function isSignedIn() { return request.auth != null; }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
     
-    function isAuthenticated() {
-      return request.auth != null;
+    // Auth Data Helper
+    function getProfile() { 
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; 
     }
     
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
+    function isSuperAdmin() { 
+      return isSignedIn() && (
+        request.auth.token.email == "msanjamahendrix3@gmail.com" || 
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getProfile().role == 'SUPER_ADMIN')
+      );
     }
     
-    function isAdmin() {
-      return isAuthenticated() && 
-        ((exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN') || 
-         (request.auth.token.email == "msanjamahendrix3@gmail.com"));
+    function isAdmin() { 
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getProfile().role == 'ADMIN';
     }
     
     function isApproved() {
-      return isAuthenticated() && 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'APPROVED';
-    }
-
-    function isValidEmail(email) {
-      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
-    }
-
-    function hasOnlyAllowedFields(fields) {
-      return request.resource.data.keys().hasOnly(fields);
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (getProfile().status == 'APPROVED' || getProfile().role == 'SUPER_ADMIN');
     }
 
     // ===============================================================
-    // Domain Validators
+    // 2. Validation Blueprints
     // ===============================================================
-
+    
     function isValidUser(data) {
-      return data.username is string && data.username.size() > 0 && data.username.size() < 50 &&
-             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
-             data.role in ['ADMIN', 'CLINICAL', 'CHW'] &&
+      return data.username is string && data.username.size() > 0 &&
+             data.name is string && data.name.size() > 0 &&
+             data.role in ['SUPER_ADMIN', 'ADMIN', 'CLINICAL', 'CHW'] &&
+             data.clinicId is string && data.clinicId.size() > 0 &&
              data.status in ['APPROVED', 'PENDING'] &&
              data.uid == request.auth.uid;
     }
 
-    function isValidPatient(data) {
-      return data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
-             data.age is string && data.age.size() > 0 && data.age.size() < 10 &&
-             data.gender is string && data.gender.size() > 0 && data.gender.size() < 10 &&
-             data.clinic is string && data.clinic.size() > 0 && data.clinic.size() < 100 &&
-             data.phone is string && data.phone.size() > 0 && data.phone.size() < 20 &&
-             data.address is string && data.address.size() > 0 && data.address.size() < 200 &&
-             data.registeredAt is string &&
-             data.status in ['Normal', 'At Risk', 'Critical'];
-    }
-
-    function isValidPost(data) {
-      return data.author is string && data.author.size() > 0 && data.author.size() < 100 &&
-             data.authorUid == request.auth.uid &&
-             data.content is string && data.content.size() > 0 && data.content.size() < 2000 &&
-             data.timestamp is number &&
-             data.likes is number &&
-             data.comments is number;
-    }
-
-    function isValidNotification(data) {
-      return data.userId is string && data.userId.size() > 0 &&
-             data.title is string && data.title.size() > 0 && data.title.size() < 100 &&
-             data.message is string && data.message.size() > 0 && data.message.size() < 500 &&
-             data.type in ['INFO', 'ALERT', 'SUCCESS'] &&
-             data.read is bool &&
-             data.timestamp is number;
+    function isValidClinic(data) {
+      return data.id is string && data.id.size() > 0 &&
+             data.name is string && data.name.size() > 0 &&
+             data.code is string && data.code.size() == 6 &&
+             data.ownerUid == request.auth.uid &&
+             data.status in ['ACTIVE', 'SUSPENDED'];
     }
 
     // ===============================================================
-    // Collection Rules
+    // 3. Collection Rules
     // ===============================================================
 
     match /users/{userId} {
-      // Users can read their own profile. Admins can read all.
-      allow read: if isOwner(userId) || isAdmin();
+      // Get: Own profile, SuperAdmin, or Clinic Admin for their staff
+      allow get: if isOwner(userId) || isSuperAdmin() || (isAdmin() && getProfile().clinicId == existing().clinicId);
       
-      // Registration: Any authenticated user can create a PENDING profile for themselves.
-      // Admins can create any profile.
-      allow create: if isAuthenticated() && isValidUser(request.resource.data) && 
-                    ((isOwner(userId) && request.resource.data.status == 'PENDING' && request.resource.data.role != 'ADMIN') || isAdmin());
+      // List: SuperAdmin or Clinic Admin (Enforced by clinicId query)
+      allow list: if isSuperAdmin() || (isAdmin());
       
-      // Update: Users can update their own name/username but NOT role or status.
-      // Admins can update everything.
-      allow update: if isAuthenticated() && isValidUser(request.resource.data) && 
-                    ((isOwner(userId) && request.resource.data.role == resource.data.role && request.resource.data.status == resource.data.status) || isAdmin());
+      // Create: Registration flow
+      allow create: if isSignedIn() && isValidUser(incoming()) && 
+                    ((isOwner(userId) && incoming().status == 'PENDING') || isSuperAdmin());
       
-      allow delete: if isAdmin();
+      // Update: Self (some fields), Admin (clinic staff), or SuperAdmin
+      allow update: if isSignedIn() && (
+        isSuperAdmin() || 
+        (isAdmin() && getProfile().clinicId == existing().clinicId) ||
+        (isOwner(userId) && incoming().role == existing().role && incoming().status == existing().status)
+      );
+      
+      // Delete: Admins can delete their clinic staff. SuperAdmins delete anyone.
+      allow delete: if isSuperAdmin() || (isAdmin() && getProfile().clinicId == existing().clinicId);
+    }
+
+    match /clinics/{clinicId} {
+      allow read: if true; // Public for registration dropdown
+      allow create: if isSignedIn() && isValidClinic(incoming());
+      allow update: if isSuperAdmin() || (isAdmin() && existing().ownerUid == request.auth.uid);
+      allow delete: if isSuperAdmin();
     }
 
     match /patients/{patientId} {
-      // Only approved health workers can read/write patient data.
-      allow read: if isApproved() || isAdmin();
-      allow create: if (isApproved() || isAdmin()) && isValidPatient(request.resource.data);
-      allow update: if (isApproved() || isAdmin()) && isValidPatient(request.resource.data);
-      allow delete: if isAdmin();
+      allow read: if isSuperAdmin() || (isApproved() && (getProfile().clinicId == existing().clinicId || getProfile().clinicId == 'SYSTEM'));
+      allow create, update: if isApproved() && (isSuperAdmin() || getProfile().clinicId == incoming().clinicId);
+      allow delete: if isSuperAdmin() || (isAdmin() && getProfile().clinicId == existing().clinicId);
     }
 
     match /posts/{postId} {
-      // Community posts are readable by all approved users.
-      allow read: if isApproved() || isAdmin();
-      
-      // Users can create posts for themselves.
-      allow create: if (isApproved() || isAdmin()) && isValidPost(request.resource.data);
-      
-      // Users can update their own posts (content only) or anyone can update likes/comments (atomic increment).
-      allow update: if (isApproved() || isAdmin()) && 
-                    ((request.auth.uid == resource.data.authorUid && isValidPost(request.resource.data)) || 
-                     (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'comments'])));
-      
-      allow delete: if (isApproved() && request.auth.uid == resource.data.authorUid) || isAdmin();
+      allow read: if isSuperAdmin() || (isApproved() && existing().clinicId == getProfile().clinicId);
+      allow create: if isApproved() && incoming().clinicId == getProfile().clinicId;
+      allow update: if isSignedIn() && (
+        (existing().authorUid == request.auth.uid) || 
+        (incoming().diff(existing()).affectedKeys().hasOnly(['likes', 'comments']))
+      );
+      allow delete: if isSuperAdmin() || (existing().authorUid == request.auth.uid) || (isAdmin() && getProfile().clinicId == existing().clinicId);
     }
 
-    match /notifications/{notificationId} {
-      // Notifications are private to the user.
-      allow read: if isOwner(resource.data.userId) || isAdmin();
-      allow create: if (isApproved() || isAdmin()) && isValidNotification(request.resource.data);
-      allow update: if isOwner(resource.data.userId) && hasOnlyAllowedFields(['read']) && request.resource.data.read == true;
-      allow delete: if isOwner(resource.data.userId) || isAdmin();
+    match /notifications/{notifId} {
+      allow read, delete: if isOwner(resource.data.userId);
+      allow create: if isSignedIn();
+      allow update: if isOwner(resource.data.userId) && incoming().diff(existing()).affectedKeys().hasOnly(['read']);
     }
 
-    // Default deny
-    match /{path=**} {
-      allow read, write: if false;
+    match /password_reset_requests/{requestId} {
+      allow create: if true;
+      allow read, update, delete: if isSuperAdmin() || (isAdmin() && getProfile().clinicId == existing().clinicId);
     }
   }
 }

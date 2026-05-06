@@ -13,7 +13,9 @@ import {
   X,
   History,
   Stethoscope,
-  Activity
+  Activity,
+  HeartPulse,
+  User
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
@@ -28,7 +30,7 @@ export default function Patients() {
   const filteredPatients = patients.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.phone.includes(searchTerm) ||
-      p.clinic.toLowerCase().includes(searchTerm.toLowerCase());
+      (p.department || '').toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === 'All' || p.status === statusFilter;
     
@@ -90,12 +92,24 @@ export default function Patients() {
                       <div className="space-y-3">
                         <div className="flex items-center gap-3 text-slate-600">
                           <Stethoscope size={18} className="text-purple-500" />
-                          <span className="text-sm font-medium">{selectedPatient.clinic} Clinic</span>
+                          <span className="text-sm font-medium">{selectedPatient.department} ({selectedPatient.clinic})</span>
                         </div>
                         <div className="flex items-center gap-3 text-slate-600">
                           <Activity size={18} className="text-emerald-500" />
                           <span className="text-sm font-medium">Status: {selectedPatient.status}</span>
                         </div>
+                        {selectedPatient.department === 'NCD' && (
+                          <>
+                            <div className="flex items-center gap-3 text-slate-600">
+                              <HeartPulse size={18} className="text-pink-500" />
+                              <span className="text-sm font-medium">BP: {selectedPatient.bpMeasurement || 'Not recorded'}</span>
+                            </div>
+                            <div className="flex items-center gap-3 text-slate-600">
+                              <User size={18} className="text-indigo-500" />
+                              <span className="text-sm font-medium">NCD ID: {selectedPatient.ncdRegNumber || 'Not recorded'}</span>
+                            </div>
+                          </>
+                        )}
                         {selectedPatient.assignedCHW && (
                           <div className="flex items-center gap-3 text-slate-600">
                             <Users size={18} className="text-orange-500" />
@@ -280,9 +294,14 @@ export default function Patients() {
                       </div>
                     </td>
                     <td className="px-8 py-5">
-                      <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-[10px] font-bold uppercase tracking-wider">
-                        {patient.clinic}
-                      </span>
+                      <div className="flex flex-col gap-1">
+                        <span className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold uppercase tracking-wider w-fit">
+                          {patient.department}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-medium ml-1">
+                          {patient.clinic}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-8 py-5">
                       <div className="space-y-1">

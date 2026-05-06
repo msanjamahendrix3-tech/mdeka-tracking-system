@@ -11,6 +11,7 @@ import {
   Plus,
   MoreVertical,
   ThumbsUp,
+  Trash2,
   Image as ImageIcon,
   Video,
   X,
@@ -23,9 +24,11 @@ import {
   onSnapshot, 
   addDoc, 
   updateDoc, 
+  deleteDoc,
   doc, 
   query, 
   orderBy,
+  where,
   increment
 } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -36,6 +39,7 @@ interface Post {
   author: string;
   authorUsername: string;
   authorUid: string;
+  clinicId: string;
   role: string;
   initial: string;
   content: string;
@@ -78,12 +82,16 @@ export default function Community() {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
-    if (!user) {
+    if (!user || user.status !== 'APPROVED') {
       setPosts([]);
       return;
     }
 
-    const q = query(collection(db, 'posts'), orderBy('timestamp', 'desc'));
+    const postsRef = collection(db, 'posts');
+    const q = user.role === 'SUPER_ADMIN'
+      ? query(postsRef, orderBy('timestamp', 'desc'))
+      : query(postsRef, where('clinicId', '==', user.clinicId), orderBy('timestamp', 'desc'));
+
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const postsList = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -128,26 +136,81 @@ export default function Community() {
       video.src = URL.createObjectURL(file);
     }
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setSelectedMedia({
-        type: isImage ? 'image' : 'video',
-        url: reader.result as string
-      });
-    };
-    reader.readAsDataURL(file);
+    // Image compression/size check
+    if (isImage) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 800;
+          const MAX_HEIGHT = 800;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          
+          // Compress to JPEG with 0.7 quality
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+          
+          // Check if still too large (Firestore limit is 1MB, but let's stay safe at 500KB)
+          if (dataUrl.length > 800000) {
+            setError('The image is too large. Please try a smaller file.');
+            setSelectedMedia(null);
+          } else {
+            setSelectedMedia({
+              type: 'image',
+              url: dataUrl
+            });
+          }
+        };
+        img.src = event.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    } else if (isVideo) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSelectedMedia({
+          type: 'video',
+          url: reader.result as string
+        });
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleCreatePost = async () => {
     if (!newPostContent.trim() && !selectedMedia) return;
     if (!user) return;
     
+    if (user.status !== 'APPROVED') {
+      setError('Your account is pending approval. You cannot post yet.');
+      return;
+    }
+    
     setIsPosting(true);
+    setError(null);
     
     const newPostData = {
       author: user.name,
       authorUsername: user.username,
       authorUid: user.uid,
+      clinicId: user.clinicId,
       role: user.role,
       initial: user.name.split(' ').map(n => n[0]).join(''),
       content: newPostContent,
@@ -162,7 +225,8 @@ export default function Community() {
       await addDoc(collection(db, 'posts'), newPostData);
       setNewPostContent('');
       setSelectedMedia(null);
-    } catch (error) {
+    } catch (error: any) {
+      setError(`Failed to post: ${error.message || 'Unknown error'}`);
       handleFirestoreError(error, OperationType.CREATE, 'posts');
     } finally {
       setIsPosting(false);
@@ -176,6 +240,15 @@ export default function Community() {
       });
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `posts/${postId}`);
+    }
+  };
+
+  const handleDeletePost = async (postId: string) => {
+    if (!window.confirm('Are you sure you want to delete this post?')) return;
+    try {
+      await deleteDoc(doc(db, 'posts', postId));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `posts/${postId}`);
     }
   };
 
@@ -274,7 +347,13 @@ export default function Community() {
 
         {/* Feed */}
         <div className="space-y-6">
-          {posts.length === 0 ? (
+          {user?.status === 'PENDING' ? (
+            <div className="bg-amber-50 p-12 rounded-3xl border border-amber-200 shadow-sm text-center">
+              <Clock className="mx-auto text-amber-400 mb-4" size={48} />
+              <h3 className="text-xl font-bold text-amber-900 mb-2">Account Pending Approval</h3>
+              <p className="text-amber-700">Your account is currently being reviewed by an administrator. You will be able to see and share posts once your account is approved.</p>
+            </div>
+          ) : posts.length === 0 ? (
             <div className="bg-white p-12 rounded-3xl border border-slate-200 shadow-sm text-center">
               <MessageSquare className="mx-auto text-slate-200 mb-4" size={48} />
               <p className="text-slate-500 font-medium">No posts yet. Be the first to share something!</p>
@@ -298,9 +377,20 @@ export default function Community() {
                     <p className="text-xs text-slate-500 font-medium">{post.role} • {formatTime(post.timestamp)}</p>
                   </div>
                 </div>
-                <button className="p-2 hover:bg-slate-50 rounded-lg text-slate-400">
-                  <MoreVertical size={20} />
-                </button>
+                  <div className="flex items-center gap-2">
+                    {(user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN' || user?.uid === post.authorUid) && (
+                      <button 
+                        onClick={() => handleDeletePost(post.id)}
+                        className="p-2 hover:bg-red-50 rounded-lg text-slate-400 hover:text-red-600 transition-colors"
+                        title="Delete Post"
+                      >
+                        <Trash2 size={20} />
+                      </button>
+                    )}
+                    <button className="p-2 hover:bg-slate-50 rounded-lg text-slate-400">
+                      <MoreVertical size={20} />
+                    </button>
+                  </div>
               </div>
 
               <div className="space-y-4">

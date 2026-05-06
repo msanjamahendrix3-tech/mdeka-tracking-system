@@ -7,13 +7,29 @@
       "properties": {
         "username": { "type": "string" },
         "name": { "type": "string" },
-        "role": { "type": "string", "enum": ["ADMIN", "CLINICAL", "CHW"] },
+        "role": { "type": "string", "enum": ["SUPER_ADMIN", "ADMIN", "CLINICAL", "CHW"] },
         "clinic": { "type": "string" },
+        "clinicId": { "type": "string" },
         "status": { "type": "string", "enum": ["APPROVED", "PENDING"] },
         "email": { "type": "string", "format": "email" },
         "uid": { "type": "string" }
       },
-      "required": ["username", "name", "role", "status", "uid"]
+      "required": ["username", "name", "role", "clinic", "clinicId", "status", "uid"]
+    },
+    "Clinic": {
+      "title": "Clinic Organization",
+      "description": "A unique clinic or hospital organization.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "code": { "type": "string" },
+        "address": { "type": "string" },
+        "ownerUid": { "type": "string" },
+        "status": { "type": "string", "enum": ["ACTIVE", "SUSPENDED"] },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "name", "code", "ownerUid", "status", "createdAt"]
     },
     "Patient": {
       "title": "Patient Record",
@@ -24,12 +40,16 @@
         "age": { "type": "string" },
         "gender": { "type": "string" },
         "clinic": { "type": "string" },
+        "clinicId": { "type": "string" },
+        "department": { "type": "string" },
         "phone": { "type": "string" },
         "email": { "type": "string" },
         "address": { "type": "string" },
         "sector": { "type": "string" },
         "allergies": { "type": "string" },
         "medications": { "type": "string" },
+        "ncdRegNumber": { "type": "string" },
+        "bpMeasurement": { "type": "string" },
         "registeredAt": { "type": "string", "format": "date-time" },
         "status": { "type": "string", "enum": ["Normal", "At Risk", "Critical"] },
         "assignedCHW": { "type": "string" },
@@ -47,7 +67,7 @@
           }
         }
       },
-      "required": ["name", "age", "gender", "clinic", "phone", "address", "registeredAt", "status"]
+      "required": ["name", "age", "gender", "clinic", "clinicId", "department", "phone", "address", "registeredAt", "status"]
     },
     "Post": {
       "title": "Community Post",
@@ -87,6 +107,22 @@
         "timestamp": { "type": "number" }
       },
       "required": ["userId", "title", "message", "read", "timestamp"]
+    },
+    "PasswordResetRequest": {
+      "title": "Password Reset Request",
+      "description": "A request by a user to reset their password, requiring admin approval.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "name": { "type": "string" },
+        "clinic": { "type": "string" },
+        "clinicId": { "type": "string" },
+        "status": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED"] },
+        "requestedAt": { "type": "number" },
+        "resolvedAt": { "type": "number" }
+      },
+      "required": ["id", "email", "status", "requestedAt"]
     }
   },
   "firestore": {
@@ -105,6 +141,14 @@
     "/notifications/{notificationId}": {
       "schema": "Notification",
       "description": "User-specific notifications."
+    },
+    "/clinics/{clinicId}": {
+      "schema": "Clinic",
+      "description": "Registered clinics in the system."
+    },
+    "/password_reset_requests/{requestId}": {
+      "schema": "PasswordResetRequest",
+      "description": "Requests for password resyncing/resetting."
     }
   }
 }

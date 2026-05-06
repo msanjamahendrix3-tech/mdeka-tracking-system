@@ -6,7 +6,8 @@ import {
   updateDoc, 
   doc, 
   query, 
-  orderBy 
+  orderBy,
+  where
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { useAuth, handleFirestoreError } from './AuthContext';
@@ -25,12 +26,16 @@ export interface Patient {
   age: string;
   gender: string;
   clinic: string;
+  clinicId: string;
+  department: string;
   phone: string;
   email: string;
   address: string;
   sector?: string;
   allergies?: string;
   medications?: string;
+  ncdRegNumber?: string;
+  bpMeasurement?: string;
   registeredAt: string;
   status: 'Normal' | 'At Risk' | 'Critical';
   assignedCHW?: string;
@@ -69,7 +74,20 @@ export function PatientProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const q = query(collection(db, 'patients'), orderBy('registeredAt', 'desc'));
+    let q;
+    if (user?.role === 'SUPER_ADMIN') {
+      q = query(collection(db, 'patients'), orderBy('registeredAt', 'desc'));
+    } else if (user?.clinicId) {
+      q = query(
+        collection(db, 'patients'), 
+        where('clinicId', '==', user.clinicId),
+        orderBy('registeredAt', 'desc')
+      );
+    } else {
+      setPatients([]);
+      return;
+    }
+
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const patientsList = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -89,9 +107,13 @@ export function PatientProvider({ children }: { children: React.ReactNode }) {
     return () => unsubscribe();
   }, [isAuthReady, isAuthenticated, user]);
 
-  const addPatient = async (patientData: Omit<Patient, 'id' | 'registeredAt' | 'status' | 'followUps'>) => {
+  const addPatient = async (patientData: Omit<Patient, 'id' | 'registeredAt' | 'status' | 'followUps' | 'clinic' | 'clinicId'>) => {
+    if (!user?.clinicId) return;
+    
     const newPatient = {
       ...patientData,
+      clinic: user.clinic,
+      clinicId: user.clinicId,
       registeredAt: new Date().toISOString(),
       status: 'Normal',
       followUps: []
@@ -126,7 +148,7 @@ export function PatientProvider({ children }: { children: React.ReactNode }) {
   const exportPatients = () => {
     if (patients.length === 0) return;
     
-    const headers = ['ID', 'Name', 'Age', 'Gender', 'Clinic', 'Phone', 'Email', 'Address', 'Status', 'Registered At'];
+    const headers = ['ID', 'Name', 'Age', 'Gender', 'Clinic', 'Clinic ID', 'Department', 'Phone', 'Email', 'Address', 'Status', 'NCD ID', 'BP Measurement', 'Registered At'];
     const csvContent = [
       headers.join(','),
       ...patients.map(p => [
@@ -135,10 +157,14 @@ export function PatientProvider({ children }: { children: React.ReactNode }) {
         p.age,
         p.gender,
         p.clinic,
+        p.clinicId,
+        p.department,
         p.phone,
         p.email,
         `"${p.address}"`,
         p.status,
+        `"${p.ncdRegNumber || ''}"`,
+        `"${p.bpMeasurement || ''}"`,
         p.registeredAt
       ].join(','))
     ].join('\n');

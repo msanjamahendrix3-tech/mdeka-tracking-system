@@ -8,7 +8,8 @@ import {
   ShieldCheck,
   CheckCircle2,
   Heart,
-  Clock
+  Clock,
+  BookOpen
 } from 'lucide-react';
 import { motion } from 'motion/react';
 
@@ -26,6 +27,13 @@ const features = [
     icon: Users,
     color: 'bg-emerald-500',
     path: '/community'
+  },
+  {
+    title: 'Resource Library',
+    description: 'Access clinical guidelines, training materials, and toolkits for all staff.',
+    icon: BookOpen,
+    color: 'bg-orange-500',
+    path: '/library'
   },
   {
     title: 'Secure Records',
@@ -83,6 +91,12 @@ export default function Home() {
               className="px-8 py-3 bg-white text-blue-600 font-semibold rounded-xl hover:bg-blue-50 transition-colors flex items-center gap-2"
             >
               Get Started <ArrowRight size={18} />
+            </Link>
+            <Link 
+              to="/register-ncd" 
+              className="px-8 py-3 bg-pink-500 text-white font-semibold rounded-xl hover:bg-pink-400 transition-colors flex items-center gap-2 shadow-lg shadow-pink-200"
+            >
+              NCD Registration
             </Link>
             <Link 
               to="/dashboard" 

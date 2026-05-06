@@ -21,7 +21,10 @@ import CHWDashboard from './pages/CHWDashboard';
 import NewFollowUp from './pages/NewFollowUp';
 import Appointments from './pages/Appointments';
 import Register from './pages/Register';
+import RegisterClinic from './pages/RegisterClinic';
 import StartVisit from './pages/StartVisit';
+import Library from './pages/Library';
+import NCDRegistration from './pages/NCDRegistration';
 
 function ProtectedRoute({ children, roles }: { children: React.ReactNode, roles?: string[] }) {
   const { user, isAuthenticated, isAuthReady } = useAuth();
@@ -62,24 +65,30 @@ export default function App() {
             <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/register-clinic" element={<RegisterClinic />} />
             <Route path="/" element={
               <ProtectedRoute>
                 <Layout><Home /></Layout>
               </ProtectedRoute>
             } />
             <Route path="/dashboard" element={
-              <ProtectedRoute roles={['ADMIN', 'CLINICAL', 'CHW']}>
+              <ProtectedRoute roles={['ADMIN', 'CLINICAL', 'CHW', 'SUPER_ADMIN']}>
                 <Layout><DashboardRouter /></Layout>
               </ProtectedRoute>
             } />
             <Route path="/patients" element={
-              <ProtectedRoute roles={['ADMIN', 'CLINICAL']}>
+              <ProtectedRoute roles={['ADMIN', 'CLINICAL', 'SUPER_ADMIN']}>
                 <Layout><Patients /></Layout>
               </ProtectedRoute>
             } />
             <Route path="/add-patient" element={
-              <ProtectedRoute roles={['ADMIN', 'CLINICAL']}>
+              <ProtectedRoute roles={['ADMIN', 'CLINICAL', 'SUPER_ADMIN']}>
                 <Layout><AddPatient /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/register-ncd" element={
+              <ProtectedRoute roles={['ADMIN', 'CLINICAL', 'SUPER_ADMIN']}>
+                <Layout><NCDRegistration /></Layout>
               </ProtectedRoute>
             } />
             <Route path="/follow-up" element={
@@ -88,12 +97,12 @@ export default function App() {
               </ProtectedRoute>
             } />
             <Route path="/new-follow-up" element={
-              <ProtectedRoute roles={['ADMIN', 'CLINICAL']}>
+              <ProtectedRoute roles={['ADMIN', 'CLINICAL', 'SUPER_ADMIN']}>
                 <Layout><NewFollowUp /></Layout>
               </ProtectedRoute>
             } />
             <Route path="/start-visit/:patientId" element={
-              <ProtectedRoute roles={['CHW', 'ADMIN']}>
+              <ProtectedRoute roles={['CHW', 'ADMIN', 'SUPER_ADMIN', 'CLINICAL']}>
                 <Layout><StartVisit /></Layout>
               </ProtectedRoute>
             } />
@@ -103,14 +112,19 @@ export default function App() {
               </ProtectedRoute>
             } />
             <Route path="/admin" element={
-              <ProtectedRoute roles={['ADMIN']}>
+              <ProtectedRoute roles={['ADMIN', 'SUPER_ADMIN']}>
                 <Layout><AdminDashboard /></Layout>
               </ProtectedRoute>
             } />
+            <Route path="/library" element={
+              <ProtectedRoute>
+                <Layout><Library /></Layout>
+              </ProtectedRoute>
+            } />
             {/* Fallback routes */}
-            <Route path="/appointments" element={<ProtectedRoute roles={['ADMIN', 'CLINICAL']}><Layout><Appointments /></Layout></ProtectedRoute>} />
-            <Route path="/clinics" element={<ProtectedRoute roles={['ADMIN', 'CLINICAL']}><Layout><Dashboard /></Layout></ProtectedRoute>} />
-            <Route path="/doctors" element={<ProtectedRoute roles={['ADMIN', 'CLINICAL']}><Layout><Community /></Layout></ProtectedRoute>} />
+            <Route path="/appointments" element={<ProtectedRoute roles={['ADMIN', 'CLINICAL', 'SUPER_ADMIN']}><Layout><Appointments /></Layout></ProtectedRoute>} />
+            <Route path="/clinics" element={<ProtectedRoute roles={['ADMIN', 'CLINICAL', 'SUPER_ADMIN']}><Layout><Dashboard /></Layout></ProtectedRoute>} />
+            <Route path="/doctors" element={<ProtectedRoute roles={['ADMIN', 'CLINICAL', 'SUPER_ADMIN']}><Layout><Community /></Layout></ProtectedRoute>} />
           </Routes>
         </Router>
       </NotificationProvider>

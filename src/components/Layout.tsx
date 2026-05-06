@@ -16,7 +16,8 @@ import {
   Search,
   Menu,
   X,
-  MapPin
+  MapPin,
+  BookOpen
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
@@ -60,19 +61,20 @@ export default function Layout({ children }: LayoutProps) {
   }
 
   const navItems = [
-    { name: 'Home', path: '/', icon: HomeIcon, roles: ['ADMIN', 'CLINICAL', 'CHW'] },
-    { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, roles: ['ADMIN', 'CLINICAL', 'CHW'] },
-    { name: 'Patients', path: '/patients', icon: Users, roles: ['ADMIN', 'CLINICAL'] },
-    { name: 'Add Patient', path: '/add-patient', icon: UserPlus, roles: ['ADMIN', 'CLINICAL'] },
-    { name: 'Follow Up', path: '/follow-up', icon: ClipboardList, roles: ['ADMIN', 'CLINICAL', 'CHW'] },
-    { name: 'Community', path: '/community', icon: Users, roles: ['ADMIN', 'CLINICAL', 'CHW'] },
-    { name: 'Admin', path: '/admin', icon: ShieldCheck, roles: ['ADMIN'] },
+    { name: 'Home', path: '/', icon: HomeIcon, roles: ['ADMIN', 'SUPER_ADMIN', 'CLINICAL', 'CHW'] },
+    { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, roles: ['ADMIN', 'SUPER_ADMIN', 'CLINICAL', 'CHW'] },
+    { name: 'Patients', path: '/patients', icon: Users, roles: ['ADMIN', 'SUPER_ADMIN', 'CLINICAL'] },
+    { name: 'Add Patient', path: '/add-patient', icon: UserPlus, roles: ['ADMIN', 'SUPER_ADMIN', 'CLINICAL'] },
+    { name: 'Follow Up', path: '/follow-up', icon: ClipboardList, roles: ['ADMIN', 'SUPER_ADMIN', 'CLINICAL', 'CHW'] },
+    { name: 'Community', path: '/community', icon: Users, roles: ['ADMIN', 'SUPER_ADMIN', 'CLINICAL', 'CHW'] },
+    { name: 'Library', path: '/library', icon: BookOpen, roles: ['ADMIN', 'SUPER_ADMIN', 'CLINICAL', 'CHW'] },
+    { name: 'Admin', path: '/admin', icon: ShieldCheck, roles: ['ADMIN', 'SUPER_ADMIN'] },
   ];
 
   const secondaryNav = [
-    { name: 'Appointments', path: '/appointments', icon: Calendar, roles: ['ADMIN', 'CLINICAL'] },
-    { name: 'Clinics', path: '/clinics', icon: Building2, roles: ['ADMIN', 'CLINICAL'] },
-    { name: 'Doctors', path: '/doctors', icon: Stethoscope, roles: ['ADMIN', 'CLINICAL'] },
+    { name: 'Appointments', path: '/appointments', icon: Calendar, roles: ['ADMIN', 'SUPER_ADMIN', 'CLINICAL'] },
+    { name: 'Clinics', path: '/clinics', icon: Building2, roles: ['ADMIN', 'SUPER_ADMIN', 'CLINICAL'] },
+    { name: 'Doctors', path: '/doctors', icon: Stethoscope, roles: ['ADMIN', 'SUPER_ADMIN', 'CLINICAL'] },
   ];
 
   const filteredNavItems = navItems.filter(item => item.roles.includes(user?.role || ''));
@@ -98,9 +100,14 @@ export default function Layout({ children }: LayoutProps) {
             <Stethoscope size={20} />
           </div>
           {isSidebarOpen && (
-            <span className="font-bold text-slate-800 text-lg tracking-tight truncate">
-              Mdeka Health
-            </span>
+            <div className="flex flex-col min-w-0">
+              <span className="font-bold text-slate-800 text-lg tracking-tight truncate leading-none">
+                Mdeka Health
+              </span>
+              <span className="text-[10px] text-blue-600 font-bold uppercase truncate">
+                {user?.clinic || 'Clinic'}
+              </span>
+            </div>
           )}
         </div>
 
@@ -152,7 +159,11 @@ export default function Layout({ children }: LayoutProps) {
           )}
         </nav>
 
-        <div className="p-4 border-t border-slate-100">
+        <div className="p-4 border-t border-slate-100 space-y-4">
+          <div className={cn("px-3 py-2 bg-slate-50 rounded-xl", !isSidebarOpen && "hidden")}>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-tight">System Owner</p>
+            <p className="text-xs font-bold text-slate-800 truncate">HASTINGS MSANJAMA</p>
+          </div>
           <button 
             onClick={handleLogout}
             className="flex items-center gap-3 px-3 py-2.5 w-full text-slate-500 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all"
