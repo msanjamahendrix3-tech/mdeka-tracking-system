@@ -26,15 +26,16 @@ import StartVisit from './pages/StartVisit';
 import Library from './pages/Library';
 import NCDRegistration from './pages/NCDRegistration';
 import Settings from './pages/Settings';
+import { MalawiBackground } from './components/MalawiBackground';
 
 function ProtectedRoute({ children, roles }: { children: React.ReactNode, roles?: string[] }) {
   const { user, isAuthenticated, isAuthReady } = useAuth();
   
   if (!isAuthReady) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-10 text-center">
+      <div className="min-h-screen bg-transparent flex flex-col items-center justify-center p-10 text-center">
         <div className="w-12 h-12 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin mb-4"></div>
-        <p className="text-slate-500 font-medium">Initializing Mdeka Health...</p>
+        <p className="text-slate-500 font-medium">Initializing MDEKA TRACKING SYSTEM...</p>
         <p className="text-xs text-slate-400 mt-2">Checking secure connection to clinic database</p>
       </div>
     );
@@ -66,6 +67,7 @@ export default function App() {
       <PatientProvider>
         <NotificationProvider>
           <Router>
+            <MalawiBackground />
             <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />

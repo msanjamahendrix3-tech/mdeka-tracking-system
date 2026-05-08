@@ -123,6 +123,24 @@
         "resolvedAt": { "type": "number" }
       },
       "required": ["id", "email", "status", "requestedAt"]
+    },
+    "ResourceRequest": {
+      "title": "Resource Request",
+      "description": "A request for a new training resource or material.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "clinicId": { "type": "string" },
+        "clinicName": { "type": "string" },
+        "topic": { "type": "string" },
+        "message": { "type": "string" },
+        "status": { "type": "string", "enum": ["PENDING", "RESOLVED"] },
+        "requestedAt": { "type": "number" },
+        "resolvedAt": { "type": "number" }
+      },
+      "required": ["id", "userId", "userName", "topic", "message", "status", "requestedAt"]
     }
   },
   "firestore": {
@@ -149,6 +167,10 @@
     "/password_reset_requests/{requestId}": {
       "schema": "PasswordResetRequest",
       "description": "Requests for password resyncing/resetting."
+    },
+    "/resource_requests/{requestId}": {
+      "schema": "ResourceRequest",
+      "description": "Requests from users for new library resources."
     }
   }
 }

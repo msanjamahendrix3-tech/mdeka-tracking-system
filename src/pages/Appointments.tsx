@@ -195,7 +195,7 @@ export default function Appointments() {
                       onChange={(e) => setFormData({...formData, chwId: e.target.value})}
                     >
                       <option value="">Select a CHW...</option>
-                      <option value="1">Officer John Mdeka</option>
+                      <option value="1">Officer John Mdek</option>
                       <option value="2">Officer Sarah Phiri</option>
                       <option value="3">Officer Banda</option>
                     </select>

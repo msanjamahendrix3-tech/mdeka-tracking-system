@@ -65,7 +65,7 @@ export default function Settings() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Email / Username</label>
-                  <input type="text" defaultValue={user?.uid.replace(/_/g, '').toLowerCase() + '@mdeka.health'} className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl" readOnly />
+                  <input type="text" defaultValue={user?.uid.replace(/_/g, '').toLowerCase() + '@mdek.health'} className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl" readOnly />
                 </div>
               </div>
             </motion.div>

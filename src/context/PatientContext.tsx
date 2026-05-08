@@ -29,13 +29,14 @@ export interface Patient {
   clinicId: string;
   department: string;
   phone: string;
-  email: string;
+  email?: string;
   address: string;
   sector?: string;
   allergies?: string;
   medications?: string;
   ncdRegNumber?: string;
   bpMeasurement?: string;
+  diabetesReading?: string;
   registeredAt: string;
   status: 'Normal' | 'At Risk' | 'Critical';
   assignedCHW?: string;
@@ -157,7 +158,7 @@ export function PatientProvider({ children }: { children: React.ReactNode }) {
   const exportPatients = () => {
     if (patients.length === 0) return;
     
-    const headers = ['ID', 'Name', 'Age', 'Gender', 'Clinic', 'Clinic ID', 'Department', 'Phone', 'Email', 'Address', 'Status', 'NCD ID', 'BP Measurement', 'Registered At'];
+    const headers = ['ID', 'Name', 'Age', 'Gender', 'Clinic', 'Clinic ID', 'Department', 'Phone', 'Email', 'Address', 'Status', 'NCD ID', 'BP Measurement', 'Diabetes Reading', 'Registered At'];
     const csvContent = [
       headers.join(','),
       ...patients.map(p => [
@@ -169,11 +170,12 @@ export function PatientProvider({ children }: { children: React.ReactNode }) {
         p.clinicId,
         p.department,
         p.phone,
-        p.email,
+        p.email || '',
         `"${p.address}"`,
         p.status,
         `"${p.ncdRegNumber || ''}"`,
         `"${p.bpMeasurement || ''}"`,
+        `"${p.diabetesReading || ''}"`,
         p.registeredAt
       ].join(','))
     ].join('\n');
@@ -182,7 +184,7 @@ export function PatientProvider({ children }: { children: React.ReactNode }) {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `mdeka_patients_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `mdek_patients_${new Date().toISOString().split('T')[0]}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();

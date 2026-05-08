@@ -60,7 +60,7 @@ export default function Home() {
             className="inline-flex items-center gap-2 px-3 py-1 bg-blue-500/30 backdrop-blur-sm rounded-full text-sm font-medium"
           >
             <Heart size={16} className="text-blue-200" />
-            <span>Welcome to Mdeka Demo Tracker</span>
+            <span>Welcome to MDEKA TRACKING SYSTEM</span>
           </motion.div>
           <motion.h1 
             initial={{ opacity: 0, y: 20 }}

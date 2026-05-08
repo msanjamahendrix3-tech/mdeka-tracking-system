@@ -125,7 +125,7 @@ export default function Register() {
 
   if (isSubmitted) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 font-sans">
+      <div className="min-h-screen bg-transparent flex items-center justify-center p-6 font-sans">
         <motion.div 
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -151,7 +151,7 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 font-sans">
+    <div className="min-h-screen bg-transparent flex items-center justify-center p-6 font-sans">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -168,7 +168,7 @@ export default function Register() {
               </div>
               <div>
                 <h1 className="text-2xl font-bold tracking-tight">Create Account</h1>
-                <p className="text-blue-100 text-sm">Join the Mdeka Health network</p>
+                <p className="text-blue-100 text-sm">Join the MDEKA TRACKING SYSTEM network</p>
               </div>
             </div>
           </div>
@@ -267,7 +267,7 @@ export default function Register() {
                         type="text" 
                         value={formData.clinic}
                         onChange={(e) => setFormData({...formData, clinic: e.target.value})}
-                        placeholder="e.g. Mdeka Health Centre" 
+                        placeholder="e.g. MDEKA TRACKING SYSTEM Centre" 
                         className="w-full pl-12 pr-4 py-3 bg-slate-50 border-slate-200 rounded-xl focus:bg-white focus:border-blue-500 focus:ring-0 transition-all font-medium"
                       />
                     </div>
@@ -333,7 +333,7 @@ export default function Register() {
             <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100 flex gap-3">
               <Stethoscope className="text-blue-600 shrink-0" size={20} />
               <p className="text-xs text-blue-800 leading-relaxed">
-                By creating an account, you are requesting access to the Mdeka Health Tracker. Your account will be secured with your email and password.
+                By creating an account, you are requesting access to the MDEKA TRACKING SYSTEM. Your account will be secured with your email and password.
               </p>
             </div>
 

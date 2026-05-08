@@ -110,8 +110,11 @@ interface AuthContextType {
   requestPasswordReset: (email: string) => Promise<{ success: boolean; message?: string }>;
   approvePasswordReset: (requestId: string) => Promise<void>;
   rejectPasswordReset: (requestId: string) => Promise<void>;
+  requestResource: (topic: string, message: string) => Promise<{ success: boolean; message?: string }>;
+  resolveResourceRequest: (requestId: string) => Promise<void>;
   pendingUsers: UserProfile[];
   resetRequests: PasswordResetRequest[];
+  resourceRequests: ResourceRequest[];
   allUsers: UserProfile[];
   allClinics: Clinic[];
   approveUser: (uid: string) => void;
@@ -127,6 +130,18 @@ interface AuthContextType {
   regenerateClinicCode: (clinicId: string) => Promise<{ success: boolean; newCode?: string; message?: string }>;
   isAuthenticated: boolean;
   isAuthReady: boolean;
+}
+
+export interface ResourceRequest {
+  id: string;
+  userId: string;
+  userName: string;
+  clinicId: string;
+  clinicName: string;
+  topic: string;
+  message: string;
+  status: 'PENDING' | 'RESOLVED';
+  requestedAt: number;
 }
 
 export interface PasswordResetRequest {
@@ -146,6 +161,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
   const [allClinics, setAllClinics] = useState<Clinic[]>([]);
   const [resetRequests, setResetRequests] = useState<PasswordResetRequest[]>([]);
+  const [resourceRequests, setResourceRequests] = useState<ResourceRequest[]>([]);
   const [isAuthReady, setIsAuthReady] = useState(false);
 
   useEffect(() => {
@@ -260,7 +276,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }, (error) => {
         handleFirestoreError(error, OperationType.LIST, 'password_reset_requests');
       });
-      return () => unsubscribeResets();
+
+      const resourcesRef = collection(db, 'resource_requests');
+      const qResources = user.role === 'SUPER_ADMIN' 
+        ? resourcesRef 
+        : query(resourcesRef, where('clinicId', '==', user.clinicId));
+
+      const unsubscribeResources = onSnapshot(qResources, (snapshot) => {
+        const reqList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as ResourceRequest);
+        setResourceRequests(reqList);
+      }, (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'resource_requests');
+      });
+
+      return () => {
+        unsubscribeResets();
+        unsubscribeResources();
+      };
     }
   }, [user]);
 
@@ -624,6 +656,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const requestResource = async (topic: string, message: string): Promise<{ success: boolean; message?: string }> => {
+    if (!user) return { success: false, message: 'You must be logged in to request a resource.' };
+    try {
+      const requestId = Math.random().toString(36).substr(2, 9).toUpperCase();
+      const newRequest: ResourceRequest = {
+        id: requestId,
+        userId: user.uid,
+        userName: user.name,
+        clinicId: user.clinicId || '',
+        clinicName: user.clinic || '',
+        topic,
+        message,
+        status: 'PENDING',
+        requestedAt: Date.now()
+      };
+      await setDoc(doc(db, 'resource_requests', requestId), newRequest);
+      return { success: true, message: 'Resource request submitted successfully.' };
+    } catch (error) {
+      console.error('Resource request error:', error);
+      return { success: false, message: 'Failed to submit resource request.' };
+    }
+  };
+
+  const resolveResourceRequest = async (requestId: string) => {
+    try {
+      await updateDoc(doc(db, 'resource_requests', requestId), { 
+        status: 'RESOLVED',
+        resolvedAt: Date.now()
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `resource_requests/${requestId}`);
+    }
+  };
+
   const rejectUser = async (uid: string) => {
     try {
       await deleteDoc(doc(db, 'users', uid));
@@ -690,8 +756,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       requestPasswordReset,
       approvePasswordReset,
       rejectPasswordReset,
-      pendingUsers, 
+      requestResource,
+      resolveResourceRequest,
+      pendingUsers,
       resetRequests,
+      resourceRequests,
       allUsers,
       allClinics,
       approveUser, 

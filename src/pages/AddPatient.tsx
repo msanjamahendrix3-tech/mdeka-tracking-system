@@ -10,12 +10,40 @@ import {
   Mail,
   MapPin,
   User,
-  HeartPulse
+  HeartPulse,
+  Activity
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 import { usePatients } from '../context/PatientContext';
 import { useAuth } from '../context/AuthContext';
+
+const getBPStatus = (bp: string) => {
+  if (!bp || !bp.includes('/')) return null;
+  const [sysStr, diaStr] = bp.split('/');
+  const sys = parseInt(sysStr, 10);
+  const dia = parseInt(diaStr, 10);
+  
+  if (isNaN(sys) || isNaN(dia)) return null;
+
+  if (sys < 90 || dia < 60) return { label: 'Low', color: 'text-blue-600 bg-blue-50 border-blue-200' };
+  if (sys >= 130 || dia >= 80) return { label: 'High', color: 'text-red-600 bg-red-50 border-red-200' };
+  if (sys >= 120 && sys < 130 && dia < 80) return { label: 'Elevated', color: 'text-orange-600 bg-orange-50 border-orange-200' };
+  
+  return { label: 'Normal', color: 'text-green-600 bg-green-50 border-green-200' };
+};
+
+const getDiabetesStatus = (reading: string) => {
+  if (!reading) return null;
+  const val = parseInt(reading.replace(/[^0-9]/g, ''), 10);
+  if (isNaN(val)) return null;
+
+  if (val < 70) return { label: 'Low', color: 'text-blue-600 bg-blue-50 border-blue-200' };
+  if (val >= 126) return { label: 'High', color: 'text-red-600 bg-red-50 border-red-200' };
+  if (val >= 100 && val <= 125) return { label: 'At Risk', color: 'text-orange-600 bg-orange-50 border-orange-200' };
+  
+  return { label: 'Normal', color: 'text-green-600 bg-green-50 border-green-200' };
+};
 
 export default function AddPatient() {
   const { patients, addPatient } = usePatients();
@@ -28,14 +56,14 @@ export default function AddPatient() {
     gender: 'Male',
     department: 'General',
     phone: '',
-    email: '',
     address: '',
     sector: '',
     allergies: '',
     medications: '',
     assignedCHW: '',
     ncdRegNumber: '',
-    bpMeasurement: ''
+    bpMeasurement: '',
+    diabetesReading: ''
   });
 
   const chws = allUsers.filter(u => u.role === 'CHW' && u.status === 'APPROVED');
@@ -80,14 +108,14 @@ export default function AddPatient() {
         gender: 'Male',
         department: 'General',
         phone: '',
-        email: '',
         address: '',
         sector: '',
         allergies: '',
         medications: '',
         assignedCHW: '',
         ncdRegNumber: '',
-        bpMeasurement: ''
+        bpMeasurement: '',
+        diabetesReading: ''
       });
       
       setTimeout(() => setIsSuccess(false), 3000);
@@ -99,7 +127,7 @@ export default function AddPatient() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Add New Patient</h1>
-          <p className="text-slate-500">Register a new patient into the Mdeka Health system.</p>
+          <p className="text-slate-500">Register a new patient into the MDEKA TRACKING SYSTEM.</p>
         </div>
         <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-200">
           <UserPlus size={24} />
@@ -157,6 +185,7 @@ export default function AddPatient() {
               >
                 <option value="General">General Clinic</option>
                 <option value="NCD">NCD (Non-Communicable Diseases)</option>
+                <option value="Diabetes">Diabetes</option>
                 <option value="Epilepsy">Epilepsy Clinic</option>
                 <option value="Malaria">Malaria Positive</option>
                 <option value="UnderFive">Under Five Vaccinated Children</option>
@@ -176,7 +205,7 @@ export default function AddPatient() {
         </div>
 
         <AnimatePresence>
-          {formData.department === 'NCD' && (
+          {['NCD', 'Diabetes'].includes(formData.department) && (
             <motion.div 
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
@@ -200,18 +229,56 @@ export default function AddPatient() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold text-slate-700">Blood Pressure (BP) Measurement</label>
+                    <div className="flex justify-between items-center">
+                      <label className="text-sm font-semibold text-slate-700">Blood Pressure (BP) Measurement</label>
+                      {formData.bpMeasurement && getBPStatus(formData.bpMeasurement) && (
+                        <span className={`px-2.5 py-0.5 text-xs font-bold rounded-full border ${getBPStatus(formData.bpMeasurement)?.color}`}>
+                          {getBPStatus(formData.bpMeasurement)?.label}
+                        </span>
+                      )}
+                    </div>
                     <div className="relative">
                       <HeartPulse className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                       <input 
                         type="text" 
                         value={formData.bpMeasurement}
-                        onChange={(e) => setFormData({...formData, bpMeasurement: e.target.value})}
+                        onChange={(e) => {
+                          let val = e.target.value.replace(/[^\d/]/g, '');
+                          if (val.length === 3 && formData.bpMeasurement.length === 2 && !val.includes('/')) {
+                            val += '/';
+                          } else if (val.length > 3 && !val.includes('/')) {
+                            val = val.slice(0, 3) + '/' + val.slice(3);
+                          }
+                          setFormData({...formData, bpMeasurement: val});
+                        }}
                         placeholder="e.g. 120/80" 
                         className="w-full pl-12 pr-4 py-3 bg-white border-blue-200 rounded-xl focus:border-blue-500 focus:ring-0 transition-all"
                       />
                     </div>
                   </div>
+
+                  {formData.department === 'Diabetes' && (
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <label className="text-sm font-semibold text-slate-700">Diabetes Reading (mg/dL)</label>
+                        {formData.diabetesReading && getDiabetesStatus(formData.diabetesReading) && (
+                          <span className={`px-2.5 py-0.5 text-xs font-bold rounded-full border ${getDiabetesStatus(formData.diabetesReading)?.color}`}>
+                            {getDiabetesStatus(formData.diabetesReading)?.label}
+                          </span>
+                        )}
+                      </div>
+                      <div className="relative">
+                        <Activity className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                        <input 
+                          type="text" 
+                          value={formData.diabetesReading}
+                          onChange={(e) => setFormData({...formData, diabetesReading: e.target.value})}
+                          placeholder="e.g. 110" 
+                          className="w-full pl-12 pr-4 py-3 bg-white border-blue-200 rounded-xl focus:border-blue-500 focus:ring-0 transition-all"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </motion.div>
@@ -297,20 +364,6 @@ export default function AddPatient() {
                   value={formData.phone}
                   onChange={(e) => setFormData({...formData, phone: e.target.value})}
                   placeholder="+1 (555) 000-0000" 
-                  className="w-full pl-12 pr-4 py-3 bg-slate-50 border-slate-200 rounded-xl focus:bg-white focus:border-blue-500 focus:ring-0 transition-all"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700">Email Address</label>
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input 
-                  required
-                  type="email" 
-                  value={formData.email}
-                  onChange={(e) => setFormData({...formData, email: e.target.value})}
-                  placeholder="john@example.com" 
                   className="w-full pl-12 pr-4 py-3 bg-slate-50 border-slate-200 rounded-xl focus:bg-white focus:border-blue-500 focus:ring-0 transition-all"
                 />
               </div>

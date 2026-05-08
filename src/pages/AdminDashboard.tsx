@@ -20,16 +20,20 @@ import {
    Check,
    CreditCard,
    DollarSign,
-   Trash2
+   Trash2,
+   BookOpen
  } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useAuth, Clinic } from '../context/AuthContext';
+import { SecurityAuditModal } from '../components/SecurityAuditModal';
 
 export default function AdminDashboard() {
   const { 
     user, 
     pendingUsers, 
     resetRequests,
+    resourceRequests = [],
+    resolveResourceRequest,
     approveUser, 
     rejectUser, 
     deleteUser,
@@ -47,6 +51,7 @@ export default function AdminDashboard() {
   const [currentClinic, setCurrentClinic] = React.useState<Clinic | null>(null);
   const [isCopying, setIsCopying] = React.useState(false);
   const [isRegenerating, setIsRegenerating] = React.useState(false);
+  const [isSecurityAuditOpen, setIsSecurityAuditOpen] = React.useState(false);
 
   const enrichedResetRequests = resetRequests
     .filter(req => req.status === 'PENDING')
@@ -63,6 +68,11 @@ export default function AdminDashboard() {
       if (user?.role === 'SUPER_ADMIN') return true;
       return req.userClinicId === user?.clinicId;
     });
+
+  const pendingResourceRequests = resourceRequests.filter(req => req.status === 'PENDING').filter(req => {
+    if (user?.role === 'SUPER_ADMIN') return true;
+    return req.clinicId === user?.clinicId;
+  });
 
   React.useEffect(() => {
     const fetchClinic = async () => {
@@ -148,7 +158,10 @@ export default function AdminDashboard() {
           <button className="p-2 hover:bg-white border border-slate-200 rounded-xl text-slate-500 transition-colors shadow-sm">
             <Settings size={20} />
           </button>
-          <button className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white font-semibold rounded-xl hover:bg-slate-800 shadow-lg transition-all">
+          <button 
+            onClick={() => setIsSecurityAuditOpen(true)}
+            className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white font-semibold rounded-xl hover:bg-slate-800 shadow-lg transition-all"
+          >
             <ShieldCheck size={20} /> Security Audit
           </button>
         </div>
@@ -398,6 +411,73 @@ export default function AdminDashboard() {
           </div>
         </div>
 
+        {/* Resource Requests */}
+        <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="p-8 border-b border-slate-100 flex items-center justify-between">
+            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <BookOpen className="text-emerald-500" size={24} />
+              Resource Requests
+              {pendingResourceRequests.length > 0 && (
+                <span className="bg-emerald-100 text-emerald-700 text-xs font-bold px-2 py-0.5 rounded-full">
+                  {pendingResourceRequests.length} Pending
+                </span>
+              )}
+            </h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-slate-50">
+                  <th className="px-8 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Requested By</th>
+                  <th className="px-8 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Topic</th>
+                  <th className="px-8 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Message</th>
+                  <th className="px-8 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Requested At</th>
+                  <th className="px-8 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {pendingResourceRequests.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-8 py-12 text-center text-slate-500 font-medium">
+                      No pending resource requests.
+                    </td>
+                  </tr>
+                ) : (
+                  pendingResourceRequests.map((req, i) => (
+                    <tr key={i} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-8 py-4">
+                        <div>
+                          <p className="text-sm font-bold text-slate-900">{req.userName}</p>
+                          <p className="text-xs text-slate-500">{req.clinicName}</p>
+                        </div>
+                      </td>
+                      <td className="px-8 py-4">
+                        <span className="text-sm font-semibold text-slate-700">{req.topic}</span>
+                      </td>
+                      <td className="px-8 py-4">
+                        <p className="text-xs text-slate-600 line-clamp-2 max-w-xs" title={req.message}>{req.message}</p>
+                      </td>
+                      <td className="px-8 py-4">
+                        <span className="text-xs text-slate-500">{new Date(req.requestedAt).toLocaleString()}</span>
+                      </td>
+                      <td className="px-8 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button 
+                            onClick={() => resolveResourceRequest(req.id)}
+                            className="px-3 py-1.5 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 transition-all flex items-center gap-1"
+                          >
+                            Mark as Handled
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         {/* User Management */}
         <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="p-8 border-b border-slate-100 flex items-center justify-between">
@@ -434,7 +514,16 @@ export default function AdminDashboard() {
                         </div>
                         <div>
                           <p className="text-sm font-bold text-slate-900">{u.name}</p>
-                          <p className="text-xs text-slate-500">@{u.username}</p>
+                          <p 
+                            className="text-xs text-slate-500 cursor-pointer hover:text-blue-600 transition-colors"
+                            onClick={() => {
+                              navigator.clipboard.writeText(u.email);
+                              alert('Email copied to clipboard');
+                            }}
+                            title="Click to copy email"
+                          >
+                            @{u.username} <span className="opacity-50">({u.email})</span>
+                          </p>
                         </div>
                       </div>
                     </td>
@@ -655,6 +744,12 @@ export default function AdminDashboard() {
           ))}
         </div>
       </div>
+
+      <SecurityAuditModal 
+        isOpen={isSecurityAuditOpen} 
+        onClose={() => setIsSecurityAuditOpen(false)} 
+        users={allUsers}
+      />
     </div>
   );
 }

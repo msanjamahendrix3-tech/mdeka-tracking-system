@@ -10,7 +10,10 @@ import {
   HeartPulse,
   ChevronRight,
   ExternalLink,
-  Info
+  Info,
+  X,
+  AlertCircle,
+  CheckCircle2
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
@@ -116,12 +119,12 @@ const resources: Resource[] = [
   // General Resources
   {
     id: 'gen-1',
-    title: 'Mdeka Health App User Manual',
+    title: 'MDEKA TRACKING SYSTEM User Manual',
     description: 'Complete guide on how to use all features of the health tracker application.',
     type: 'Guide',
     category: 'General',
     tags: ['App', 'Manual', 'Help'],
-    url: 'https://github.com/hastings-msanjama/mdeka-health'
+    url: 'https://github.com/hastings-msanjama/mdek-tracker'
   },
   {
     id: 'gen-2',
@@ -135,9 +138,38 @@ const resources: Resource[] = [
 ];
 
 export default function Library() {
-  const { user } = useAuth();
+  const { user, requestResource } = useAuth();
   const [searchQuery, setSearchQuery] = React.useState('');
   const [activeCategory, setActiveCategory] = React.useState<'All' | 'Nurse' | 'Clinician' | 'CHW' | 'General'>('All');
+  
+  const [isRequestModalOpen, setIsRequestModalOpen] = React.useState(false);
+  const [requestTopic, setRequestTopic] = React.useState('');
+  const [requestMessage, setRequestMessage] = React.useState('');
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [requestStatus, setRequestStatus] = React.useState<{type: 'success' | 'error', text: string} | null>(null);
+
+  const handleRequestSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!requestTopic || !requestMessage) return;
+    
+    setIsSubmitting(true);
+    setRequestStatus(null);
+    
+    const result = await requestResource(requestTopic, requestMessage);
+    
+    setIsSubmitting(false);
+    if (result.success) {
+      setRequestStatus({ type: 'success', text: result.message || 'Request submitted successfully!' });
+      setTimeout(() => {
+        setIsRequestModalOpen(false);
+        setRequestTopic('');
+        setRequestMessage('');
+        setRequestStatus(null);
+      }, 2000);
+    } else {
+      setRequestStatus({ type: 'error', text: result.message || 'Failed to submit request.' });
+    }
+  };
 
   const filteredResources = resources.filter(resource => {
     const matchesSearch = resource.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -279,7 +311,10 @@ export default function Library() {
               We are constantly updating our library. If you need specific resources or training materials for your clinic, let your administrator know.
             </p>
           </div>
-          <button className="px-8 py-3 bg-white text-blue-600 font-bold rounded-2xl hover:bg-blue-50 transition-all shadow-lg">
+          <button 
+            onClick={() => setIsRequestModalOpen(true)}
+            className="px-8 py-3 bg-white text-blue-600 font-bold rounded-2xl hover:bg-blue-50 transition-all shadow-lg"
+          >
             Request Resource
           </button>
         </div>
@@ -288,6 +323,77 @@ export default function Library() {
         <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 w-64 h-64 bg-blue-500 rounded-full opacity-20 blur-3xl"></div>
         <div className="absolute bottom-0 left-0 translate-y-1/2 -translate-x-1/2 w-96 h-96 bg-blue-400 rounded-full opacity-10 blur-3xl"></div>
       </div>
+
+      {/* Resource Request Modal */}
+      {isRequestModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden"
+          >
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="text-xl font-bold text-slate-900">Request Resource</h3>
+              <button 
+                onClick={() => setIsRequestModalOpen(false)}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <form onSubmit={handleRequestSubmit} className="p-6 space-y-4">
+              {requestStatus && (
+                <div className={`p-4 rounded-xl flex items-start gap-3 ${
+                  requestStatus.type === 'success' ? 'bg-emerald-50 text-emerald-800' : 'bg-red-50 text-red-800'
+                }`}>
+                  {requestStatus.type === 'success' ? (
+                    <CheckCircle2 className="shrink-0 text-emerald-500 mt-0.5" size={18} />
+                  ) : (
+                    <AlertCircle className="shrink-0 text-red-500 mt-0.5" size={18} />
+                  )}
+                  <p className="text-sm font-medium">{requestStatus.text}</p>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Topic or Subject</label>
+                <input 
+                  type="text" 
+                  value={requestTopic}
+                  onChange={(e) => setRequestTopic(e.target.value)}
+                  placeholder="e.g., Maternity Care Guidelines"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-blue-500 focus:ring-0 transition-all text-sm"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Additional Details</label>
+                <textarea 
+                  value={requestMessage}
+                  onChange={(e) => setRequestMessage(e.target.value)}
+                  placeholder="Please describe what specific information you are looking for..."
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-blue-500 focus:ring-0 transition-all text-sm h-32 resize-none"
+                  required
+                />
+              </div>
+              
+              <button 
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all disabled:opacity-50 flex items-center justify-center"
+              >
+                {isSubmitting ? (
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  'Submit Request'
+                )}
+              </button>
+            </form>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

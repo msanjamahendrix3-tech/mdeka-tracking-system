@@ -51,7 +51,7 @@ export default function Layout({ children }: LayoutProps) {
 
   if (!isAuthReady) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-10 text-center">
+      <div className="min-h-screen bg-transparent flex flex-col items-center justify-center p-10 text-center">
         <div className="w-12 h-12 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin mb-4"></div>
         <p className="text-slate-500 font-medium">Loading Layout...</p>
       </div>
@@ -89,7 +89,7 @@ export default function Layout({ children }: LayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex font-sans">
+    <div className="min-h-screen bg-transparent flex font-sans">
       <ConnectionStatus />
       {/* Sidebar */}
       <aside 
@@ -105,7 +105,7 @@ export default function Layout({ children }: LayoutProps) {
           {isSidebarOpen && (
             <div className="flex flex-col min-w-0">
               <span className="font-bold text-slate-800 text-lg tracking-tight truncate leading-none">
-                Mdeka Health
+                MDEKA TRACKING SYSTEM
               </span>
               <span className="text-[10px] text-blue-600 font-bold uppercase truncate">
                 {user?.clinic || 'Clinic'}

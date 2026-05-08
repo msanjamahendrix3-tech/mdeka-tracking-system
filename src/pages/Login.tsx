@@ -81,7 +81,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 font-sans">
+    <div className="min-h-screen bg-transparent flex items-center justify-center p-6 font-sans">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -93,7 +93,7 @@ export default function Login() {
               <Stethoscope size={32} />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">Mdeka Health Tracker</h1>
+              <h1 className="text-2xl font-bold tracking-tight">MDEKA TRACKING SYSTEM</h1>
               <p className="text-blue-100 text-sm">Secure access for health professionals</p>
             </div>
           </div>

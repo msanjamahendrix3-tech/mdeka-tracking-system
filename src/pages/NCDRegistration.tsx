@@ -15,6 +15,21 @@ import { motion, AnimatePresence } from 'motion/react';
 import { usePatients } from '../context/PatientContext';
 import { useAuth } from '../context/AuthContext';
 
+const getBPStatus = (bp: string) => {
+  if (!bp || !bp.includes('/')) return null;
+  const [sysStr, diaStr] = bp.split('/');
+  const sys = parseInt(sysStr, 10);
+  const dia = parseInt(diaStr, 10);
+  
+  if (isNaN(sys) || isNaN(dia)) return null;
+
+  if (sys < 90 || dia < 60) return { label: 'Low', color: 'text-blue-600 bg-blue-50 border-blue-200' };
+  if (sys >= 130 || dia >= 80) return { label: 'High', color: 'text-red-600 bg-red-50 border-red-200' };
+  if (sys >= 120 && sys < 130 && dia < 80) return { label: 'Elevated', color: 'text-orange-600 bg-orange-50 border-orange-200' };
+  
+  return { label: 'Normal', color: 'text-green-600 bg-green-50 border-green-200' };
+};
+
 export default function NCDRegistration() {
   const { addPatient } = usePatients();
   const { allUsers } = useAuth();
@@ -184,14 +199,29 @@ export default function NCDRegistration() {
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700">Current BP Measurement</label>
+              <div className="flex justify-between items-center">
+                <label className="text-sm font-semibold text-slate-700">Current BP Measurement</label>
+                {formData.bpMeasurement && getBPStatus(formData.bpMeasurement) && (
+                  <span className={`px-2.5 py-0.5 text-xs font-bold rounded-full border ${getBPStatus(formData.bpMeasurement)?.color}`}>
+                    {getBPStatus(formData.bpMeasurement)?.label}
+                  </span>
+                )}
+              </div>
               <div className="relative">
                 <HeartPulse className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                 <input 
                   required
                   type="text" 
                   value={formData.bpMeasurement}
-                  onChange={(e) => setFormData({...formData, bpMeasurement: e.target.value})}
+                  onChange={(e) => {
+                    let val = e.target.value.replace(/[^\d/]/g, '');
+                    if (val.length === 3 && formData.bpMeasurement.length === 2 && !val.includes('/')) {
+                      val += '/';
+                    } else if (val.length > 3 && !val.includes('/')) {
+                      val = val.slice(0, 3) + '/' + val.slice(3);
+                    }
+                    setFormData({...formData, bpMeasurement: val});
+                  }}
                   placeholder="e.g. 130/85" 
                   className="w-full pl-12 pr-4 py-3 bg-white border-pink-200 rounded-xl focus:border-pink-500 focus:ring-0 transition-all"
                 />
@@ -216,19 +246,6 @@ export default function NCDRegistration() {
                   value={formData.phone}
                   onChange={(e) => setFormData({...formData, phone: e.target.value})}
                   placeholder="Contact Number" 
-                  className="w-full pl-12 pr-4 py-3 bg-slate-50 border-slate-200 rounded-xl focus:bg-white focus:border-blue-500 focus:ring-0 transition-all"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700">Email (Optional)</label>
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input 
-                  type="email" 
-                  value={formData.email}
-                  onChange={(e) => setFormData({...formData, email: e.target.value})}
-                  placeholder="email@example.com" 
                   className="w-full pl-12 pr-4 py-3 bg-slate-50 border-slate-200 rounded-xl focus:bg-white focus:border-blue-500 focus:ring-0 transition-all"
                 />
               </div>

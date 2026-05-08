@@ -88,7 +88,7 @@ export default function RegisterClinic() {
 
   if (isSubmitted) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+      <div className="min-h-screen bg-transparent flex items-center justify-center p-6">
         <motion.div 
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -114,14 +114,14 @@ export default function RegisterClinic() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
+    <div className="min-h-screen bg-transparent flex flex-col md:flex-row">
       {/* Branding Side */}
       <div className="md:w-1/3 bg-blue-600 p-8 md:p-12 text-white flex flex-col justify-between relative overflow-hidden">
         <div className="relative z-10">
           <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-md mb-8">
             <Hospital size={28} />
           </div>
-          <h1 className="text-4xl font-black tracking-tight mb-4">Mdeka Health</h1>
+          <h1 className="text-4xl font-black tracking-tight mb-4">MDEKA TRACKING SYSTEM</h1>
           <p className="text-blue-100 text-lg font-medium leading-relaxed max-w-sm">
             Empowering Health Clinics and Hospitals with advanced digital tracking and community outreach tools.
           </p>

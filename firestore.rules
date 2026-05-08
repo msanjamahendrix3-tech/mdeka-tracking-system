@@ -117,5 +117,15 @@ service cloud.firestore {
       allow create: if true;
       allow read, update, delete: if isSuperAdmin() || (isAdmin() && getProfile().clinicId == existing().clinicId);
     }
+    
+    match /resource_requests/{requestId} {
+      allow create: if isSignedIn() &&
+                    incoming().userId == request.auth.uid &&
+                    incoming().keys().hasAll(['id', 'userId', 'userName', 'clinicId', 'clinicName', 'topic', 'message', 'status', 'requestedAt']) &&
+                    incoming().status == 'PENDING';
+      allow read: if isSuperAdmin() || (isAdmin() && getProfile().clinicId == existing().clinicId) || (isSignedIn() && existing().userId == request.auth.uid);
+      allow update: if isSuperAdmin() || (isAdmin() && getProfile().clinicId == existing().clinicId);
+      allow delete: if isSuperAdmin();
+    }
   }
 }
