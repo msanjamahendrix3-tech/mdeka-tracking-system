@@ -1,5 +1,6 @@
 import React from 'react';
 import { usePatients, Patient, FollowUpRecord } from '../context/PatientContext';
+import { useAuth } from '../context/AuthContext';
 import { 
   Users, 
   Search, 
@@ -15,13 +16,15 @@ import {
   Stethoscope,
   Activity,
   HeartPulse,
-  User
+  User,
+  Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 
 export default function Patients() {
-  const { patients, exportPatients } = usePatients();
+  const { patients, exportPatients, deletePatient } = usePatients();
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState<string>('All');
   const [selectedPatient, setSelectedPatient] = React.useState<Patient | null>(null);
@@ -164,7 +167,22 @@ export default function Patients() {
                 </div>
               </div>
 
-              <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3">
+              <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex justify-end items-center gap-3">
+                <div className="flex-1">
+                  {(user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN') && (
+                    <button 
+                      onClick={async () => {
+                        if (window.confirm(`Are you sure you want to permanently delete patient ${selectedPatient.name}?`)) {
+                          await deletePatient(selectedPatient.id);
+                          setSelectedPatient(null);
+                        }
+                      }}
+                      className="px-4 py-2 text-red-600 font-semibold hover:bg-red-50 rounded-xl transition-all flex items-center gap-2"
+                    >
+                      <Trash2 size={18} /> Delete Patient
+                    </button>
+                  )}
+                </div>
                 <button 
                   onClick={() => setSelectedPatient(null)}
                   className="px-6 py-2 text-slate-600 font-semibold hover:bg-slate-200 rounded-xl transition-all"
@@ -323,9 +341,25 @@ export default function Patients() {
                       </div>
                     </td>
                     <td className="px-8 py-5 text-right">
-                      <button className="p-2 hover:bg-white border border-transparent hover:border-slate-200 rounded-xl text-slate-400 transition-all">
-                        <MoreVertical size={18} />
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        {(user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN') && (
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (window.confirm(`Are you sure you want to delete patient ${patient.name}?`)) {
+                                deletePatient(patient.id);
+                              }
+                            }}
+                            className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-xl transition-all"
+                            title="Delete Patient"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        )}
+                        <button className="p-2 hover:bg-white border border-transparent hover:border-slate-200 rounded-xl text-slate-400 transition-all">
+                          <MoreVertical size={18} />
+                        </button>
+                      </div>
                     </td>
                   </motion.tr>
                 ))

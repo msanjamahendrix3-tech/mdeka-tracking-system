@@ -17,7 +17,8 @@ import {
   Menu,
   X,
   MapPin,
-  BookOpen
+  BookOpen,
+  Settings
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
@@ -50,8 +51,9 @@ export default function Layout({ children }: LayoutProps) {
 
   if (!isAuthReady) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin"></div>
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-10 text-center">
+        <div className="w-12 h-12 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+        <p className="text-slate-500 font-medium">Loading Layout...</p>
       </div>
     );
   }
@@ -69,6 +71,7 @@ export default function Layout({ children }: LayoutProps) {
     { name: 'Community', path: '/community', icon: Users, roles: ['ADMIN', 'SUPER_ADMIN', 'CLINICAL', 'CHW'] },
     { name: 'Library', path: '/library', icon: BookOpen, roles: ['ADMIN', 'SUPER_ADMIN', 'CLINICAL', 'CHW'] },
     { name: 'Admin', path: '/admin', icon: ShieldCheck, roles: ['ADMIN', 'SUPER_ADMIN'] },
+    { name: 'Settings', path: '/settings', icon: Settings, roles: ['ADMIN', 'SUPER_ADMIN', 'CLINICAL', 'CHW'] },
   ];
 
   const secondaryNav = [

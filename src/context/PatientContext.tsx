@@ -53,8 +53,9 @@ enum OperationType {
 
 interface PatientContextType {
   patients: Patient[];
-  addPatient: (patient: Omit<Patient, 'id' | 'registeredAt' | 'status' | 'followUps'>) => Promise<void>;
+  addPatient: (patient: Omit<Patient, 'id' | 'registeredAt' | 'status' | 'followUps' | 'clinic' | 'clinicId'>) => Promise<void>;
   addFollowUp: (patientId: string, followUp: Omit<FollowUpRecord, 'id'>) => Promise<void>;
+  deletePatient: (patientId: string) => Promise<void>;
   exportPatients: () => void;
 }
 
@@ -145,6 +146,14 @@ export function PatientProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const deletePatient = async (patientId: string) => {
+    try {
+      await deleteDoc(doc(db, 'patients', patientId));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `patients/${patientId}`);
+    }
+  };
+
   const exportPatients = () => {
     if (patients.length === 0) return;
     
@@ -181,7 +190,7 @@ export function PatientProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <PatientContext.Provider value={{ patients, addPatient, addFollowUp, exportPatients }}>
+    <PatientContext.Provider value={{ patients, addPatient, addFollowUp, deletePatient, exportPatients }}>
       {children}
     </PatientContext.Provider>
   );

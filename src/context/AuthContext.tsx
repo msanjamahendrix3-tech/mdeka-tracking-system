@@ -86,7 +86,7 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
       emailVerified: auth.currentUser?.emailVerified,
       isAnonymous: auth.currentUser?.isAnonymous,
       tenantId: auth.currentUser?.tenantId,
-      providerInfo: auth.currentUser?.providerData.map(provider => ({
+      providerInfo: auth.currentUser?.providerData?.map(provider => ({
         providerId: provider.providerId,
         displayName: provider.displayName,
         email: provider.email,
@@ -106,7 +106,7 @@ interface AuthContextType {
   loginWithEmail: (email: string, password: string) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
   register: (userData: Omit<UserProfile, 'status' | 'uid' | 'email'>) => Promise<void>;
-  registerWithEmail: (email: string, password: string, userData: Omit<UserProfile, 'status' | 'uid' | 'email'>, clinicData?: Omit<Clinic, 'id' | 'ownerUid' | 'status' | 'createdAt'>) => Promise<{ success: boolean; message?: string }>;
+  registerWithEmail: (email: string, password: string, userData: Omit<UserProfile, 'status' | 'uid' | 'email'>, clinicData?: Omit<Clinic, 'id' | 'ownerUid' | 'status' | 'createdAt' | 'subscriptionStatus'>) => Promise<{ success: boolean; message?: string }>;
   requestPasswordReset: (email: string) => Promise<{ success: boolean; message?: string }>;
   approvePasswordReset: (requestId: string) => Promise<void>;
   rejectPasswordReset: (requestId: string) => Promise<void>;
@@ -117,6 +117,7 @@ interface AuthContextType {
   approveUser: (uid: string) => void;
   rejectUser: (uid: string) => void;
   deleteUser: (uid: string) => Promise<void>;
+  deleteClinic: (clinicId: string) => Promise<void>;
   updateClinicStatus: (clinicId: string, status: 'ACTIVE' | 'SUSPENDED') => Promise<void>;
   updateClinicSubscription: (clinicId: string, status: 'PAID' | 'UNPAID') => Promise<void>;
   createClinic: (clinicData: Omit<Clinic, 'id' | 'ownerUid' | 'status' | 'createdAt' | 'subscriptionStatus'>) => Promise<{ success: boolean; clinicId?: string; message?: string }>;
@@ -148,9 +149,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthReady, setIsAuthReady] = useState(false);
 
   useEffect(() => {
+    console.log('AuthContext: Initializing auth listener...');
     let unsubscribeUserDoc: (() => void) | null = null;
+    
+    // Safety timeout: Ensure app becomes "ready" even if Firebase hangs
+    const safetyTimeout = setTimeout(() => {
+      if (!isAuthReady) {
+        console.warn('AuthContext: Safety timeout reached. Forcing isAuthReady to true.');
+        setIsAuthReady(true);
+      }
+    }, 10000);
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+      console.log('AuthContext: onAuthStateChanged fired', firebaseUser?.email || 'No user');
+      
       if (unsubscribeUserDoc) {
         unsubscribeUserDoc();
         unsubscribeUserDoc = null;
@@ -161,53 +173,75 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         // Use onSnapshot for real-time updates to the user profile (e.g. approval status)
         unsubscribeUserDoc = onSnapshot(userDocRef, async (docSnap) => {
-          if (docSnap.exists()) {
-            let profile = docSnap.data() as UserProfile;
-            
-            // Check clinic status/subscription if not SUPER_ADMIN
-            if (profile.role !== 'SUPER_ADMIN' && profile.clinicId && profile.clinicId !== 'SYSTEM') {
-              const clinicRef = doc(db, 'clinics', profile.clinicId);
-              const clinicSnap = await getDoc(clinicRef);
-              if (clinicSnap.exists()) {
-                const clinicData = clinicSnap.data() as Clinic;
-                if (clinicData.status === 'SUSPENDED' || clinicData.subscriptionStatus === 'UNPAID') {
-                  setUser({ ...profile, status: 'PENDING' }); // Force to pending or restricted state
-                  setIsAuthReady(true);
-                  return;
+          console.log('AuthContext: User snapshot received', docSnap.exists() ? 'Exists' : 'Does not exist');
+          try {
+            if (docSnap.exists()) {
+              let profile = docSnap.data() as UserProfile;
+              if (!profile) {
+                console.error('AuthContext: User profile data is empty');
+                setUser(null);
+                return;
+              }
+              
+              // Check clinic status/subscription if not SUPER_ADMIN
+              if (profile.role !== 'SUPER_ADMIN' && profile.clinicId && profile.clinicId !== 'SYSTEM') {
+                try {
+                  const clinicRef = doc(db, 'clinics', profile.clinicId);
+                  const clinicSnap = await getDoc(clinicRef);
+                  if (clinicSnap.exists()) {
+                    const clinicData = clinicSnap.data() as Clinic;
+                    if (clinicData.status === 'SUSPENDED' || clinicData.subscriptionStatus === 'UNPAID') {
+                      setUser({ ...profile, status: 'PENDING' }); // Force to pending or restricted state
+                      return;
+                    }
+                  }
+                } catch (clinicErr) {
+                  console.warn('AuthContext: Clinic check failed:', clinicErr);
                 }
               }
-            }
 
-            if (firebaseUser.email === 'msanjamahendrix3@gmail.com') {
-              profile = { ...profile, status: 'APPROVED', role: 'SUPER_ADMIN' };
+              if (firebaseUser.email === 'msanjamahendrix3@gmail.com') {
+                profile = { ...profile, status: 'APPROVED', role: 'SUPER_ADMIN', clinicId: 'SYSTEM', clinic: 'System' };
+              }
+              setUser(profile);
+            } else if (firebaseUser.email === 'msanjamahendrix3@gmail.com') {
+              console.log('AuthContext: Creating profile for Super Admin (email match)');
+              setUser({
+                uid: firebaseUser.uid,
+                email: firebaseUser.email!,
+                name: firebaseUser.displayName || 'Admin',
+                username: 'admin',
+                role: 'SUPER_ADMIN',
+                clinic: 'System',
+                clinicId: 'SYSTEM',
+                status: 'APPROVED'
+              });
+            } else {
+              console.log('AuthContext: No profile found, user not approved');
+              setUser(null);
             }
-            setUser(profile);
-          } else if (firebaseUser.email === 'msanjamahendrix3@gmail.com') {
-            setUser({
-              uid: firebaseUser.uid,
-              email: firebaseUser.email!,
-              name: firebaseUser.displayName || 'Admin',
-              username: 'admin',
-              role: 'SUPER_ADMIN',
-              clinic: 'System',
-              clinicId: 'SYSTEM',
-              status: 'APPROVED'
-            });
-          } else {
+          } catch (err) {
+            console.error('AuthContext: Error processing user snapshot:', err);
             setUser(null);
+          } finally {
+            clearTimeout(safetyTimeout);
+            setIsAuthReady(true);
           }
-          setIsAuthReady(true);
         }, (error) => {
-          console.warn('User profile listener error:', error);
+          console.warn('AuthContext: User profile listener error:', error);
+          clearTimeout(safetyTimeout);
           setIsAuthReady(true);
         });
       } else {
+        console.log('AuthContext: No authenticated user');
         setUser(null);
+        clearTimeout(safetyTimeout);
         setIsAuthReady(true);
       }
     });
 
     return () => {
+      clearTimeout(safetyTimeout);
       unsubscribeAuth();
       if (unsubscribeUserDoc) unsubscribeUserDoc();
     };
@@ -272,7 +306,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (userDoc.exists()) {
         let profile = userDoc.data() as UserProfile;
         if (firebaseUser.email === 'msanjamahendrix3@gmail.com') {
-          profile = { ...profile, status: 'APPROVED', role: 'SUPER_ADMIN' };
+          profile = { ...profile, status: 'APPROVED', role: 'SUPER_ADMIN', clinicId: 'SYSTEM', clinic: 'System' };
+          try {
+            await updateDoc(userDocRef, { status: 'APPROVED', role: 'SUPER_ADMIN', clinicId: 'SYSTEM', clinic: 'System' });
+          } catch(e) {
+             console.warn("Could not auto-upgrade admin doc", e);
+          }
         }
         
         if (profile.status === 'PENDING') {
@@ -342,7 +381,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         if (email === 'msanjamahendrix3@gmail.com') {
-          profile = { ...profile, status: 'APPROVED', role: 'SUPER_ADMIN' };
+          profile = { ...profile, status: 'APPROVED', role: 'SUPER_ADMIN', clinicId: 'SYSTEM', clinic: 'System' };
+          try {
+            await updateDoc(userDocRef, { status: 'APPROVED', role: 'SUPER_ADMIN', clinicId: 'SYSTEM', clinic: 'System' });
+          } catch(e) {
+             console.warn("Could not auto-upgrade admin doc", e);
+          }
         }
 
         if (profile.status === 'PENDING') {
@@ -372,18 +416,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       let message = error.message || 'Login failed. Please check your credentials.';
       
       // Map common Firebase Auth errors to user-friendly messages
-      if (error.code === 'auth/user-not-found' || 
-          error.code === 'auth/wrong-password' || 
-          error.code === 'auth/invalid-credential' ||
-          error.code === 'auth/invalid-email') {
+      const errorCode = error.code || '';
+      const errorMessage = error.message || '';
+
+      if (errorCode === 'auth/user-not-found' || 
+          errorCode === 'auth/wrong-password' || 
+          errorCode === 'auth/invalid-credential' ||
+          errorCode === 'auth/invalid-login-credentials' ||
+          errorCode === 'auth/invalid-email' ||
+          errorMessage.includes('auth/invalid-credential') ||
+          errorMessage.includes('invalid-login-credentials')) {
         message = 'Invalid email or password. Please check your credentials and try again.';
-      } else if (error.code === 'auth/user-disabled') {
+      } else if (errorCode === 'auth/user-disabled') {
         message = 'This account has been disabled. Please contact support.';
-      } else if (error.code === 'auth/too-many-requests') {
+      } else if (errorCode === 'auth/too-many-requests') {
         message = 'Too many failed login attempts. Please try again later.';
-      } else if (error.code === 'auth/operation-not-allowed') {
+      } else if (errorCode === 'auth/operation-not-allowed') {
         message = 'Email/Password sign-in is not enabled. Please use Google Login or contact the administrator.';
-      } else if (error.code === 'auth/network-request-failed') {
+      } else if (errorCode === 'auth/network-request-failed') {
         message = 'Connectivity issue: Please check your internet connection or disable any ad-blockers/VPNs that might be blocking Google services.';
       }
       
@@ -450,8 +500,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         uid: firebaseUser.uid,
         email: email,
         role: isBootstrapAdmin ? 'SUPER_ADMIN' : userData.role,
-        clinic: (isBootstrapAdmin && !clinicData) ? 'System' : finalClinicName,
-        clinicId: (isBootstrapAdmin && !clinicData) ? 'SYSTEM' : finalClinicId
+        clinic: isBootstrapAdmin ? 'System' : finalClinicName,
+        clinicId: isBootstrapAdmin ? 'SYSTEM' : finalClinicId
       };
       
       try {
@@ -593,6 +643,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const deleteClinic = async (clinicId: string) => {
+    try {
+      // 1. Delete all users belonging to this clinic
+      const usersQuery = query(collection(db, 'users'), where('clinicId', '==', clinicId));
+      const usersSnapshot = await getDocs(usersQuery);
+      
+      const deleteUserPromises = usersSnapshot.docs.map(userDoc => 
+        deleteDoc(doc(db, 'users', userDoc.id))
+      );
+      await Promise.all(deleteUserPromises);
+
+      // 2. Delete all patients belonging to this clinic
+      const patientsQuery = query(collection(db, 'patients'), where('clinicId', '==', clinicId));
+      const patientsSnapshot = await getDocs(patientsQuery);
+      
+      const deletePatientPromises = patientsSnapshot.docs.map(patientDoc => 
+        deleteDoc(doc(db, 'patients', patientDoc.id))
+      );
+      await Promise.all(deletePatientPromises);
+
+      // 3. Delete the clinic itself
+      await deleteDoc(doc(db, 'clinics', clinicId));
+    } catch (error: any) {
+      console.error("deleteClinic Error:", error);
+      alert("Failed to delete clinic: " + (error.message || String(error)));
+      handleFirestoreError(error, OperationType.DELETE, `clinics/${clinicId}`);
+    }
+  };
+
   const logout = async () => {
     await signOut(auth);
     setUser(null);
@@ -618,6 +697,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       approveUser, 
       rejectUser,
       deleteUser,
+      deleteClinic,
       updateClinicStatus,
       updateClinicSubscription,
       createClinic,

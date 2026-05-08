@@ -211,9 +211,31 @@ export default function Login() {
               <p className="text-xs text-slate-500">
                 Hospital or Clinic? <Link to="/register-clinic" className="text-blue-600 font-bold hover:underline">Register your facility</Link>
               </p>
-              <p className="text-[10px] text-slate-400 max-w-xs mx-auto">
-                Each account is tied to a specific Health Clinic or Hospital context.
-              </p>
+              
+              <div className="pt-4 mt-4 border-t border-slate-50">
+                <p className="text-[10px] text-slate-400 mb-2 font-medium">FIX CONNECTION ISSUES</p>
+                <button 
+                  onClick={() => {
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    if ('caches' in window) {
+                      caches.keys().then(names => {
+                        for (let name of names) caches.delete(name);
+                      });
+                    }
+                    if ('serviceWorker' in navigator) {
+                      navigator.serviceWorker.getRegistrations().then(regs => {
+                        for (let reg of regs) reg.unregister();
+                      });
+                    }
+                    window.location.href = window.location.origin + window.location.pathname + '?reset=' + Date.now();
+                  }}
+                  className="text-[10px] bg-slate-100 text-slate-500 px-3 py-1 rounded-full hover:bg-slate-200 transition-colors font-bold"
+                >
+                  NUCLEAR RESET (FIX WHITE SCREEN/AUTH)
+                </button>
+              </div>
+
               <div className="pt-2">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Powered by</p>
                 <p className="text-xs font-bold text-slate-600">HASTINGS MSANJAMA</p>

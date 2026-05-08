@@ -40,7 +40,8 @@ export default function AdminDashboard() {
     approvePasswordReset,
     rejectPasswordReset,
     getClinicById,
-    regenerateClinicCode
+    regenerateClinicCode,
+    deleteClinic
   } = useAuth();
   const [userSearch, setUserSearch] = React.useState('');
   const [currentClinic, setCurrentClinic] = React.useState<Clinic | null>(null);
@@ -606,7 +607,7 @@ export default function AdminDashboard() {
                               title="Delete Facility"
                               onClick={() => {
                                 if(window.confirm(`Are you sure you want to permanently remove ${clinic.name}? This action cannot be undone.`)) {
-                                  // Add delete logic if needed
+                                  deleteClinic(clinic.id);
                                 }
                               }}
                             >

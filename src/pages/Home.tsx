@@ -12,6 +12,7 @@ import {
   BookOpen
 } from 'lucide-react';
 import { motion } from 'motion/react';
+import { usePatients } from '../context/PatientContext';
 
 const features = [
   {
@@ -43,8 +44,6 @@ const features = [
     path: '/admin'
   }
 ];
-
-import { usePatients } from '../context/PatientContext';
 
 export default function Home() {
   const navigate = useNavigate();

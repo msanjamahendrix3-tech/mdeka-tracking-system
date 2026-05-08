@@ -25,14 +25,17 @@ import RegisterClinic from './pages/RegisterClinic';
 import StartVisit from './pages/StartVisit';
 import Library from './pages/Library';
 import NCDRegistration from './pages/NCDRegistration';
+import Settings from './pages/Settings';
 
 function ProtectedRoute({ children, roles }: { children: React.ReactNode, roles?: string[] }) {
   const { user, isAuthenticated, isAuthReady } = useAuth();
   
   if (!isAuthReady) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin"></div>
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-10 text-center">
+        <div className="w-12 h-12 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+        <p className="text-slate-500 font-medium">Initializing Mdeka Health...</p>
+        <p className="text-xs text-slate-400 mt-2">Checking secure connection to clinic database</p>
       </div>
     );
   }
@@ -57,6 +60,7 @@ function DashboardRouter() {
 }
 
 export default function App() {
+  console.log('App: Rendering component');
   return (
     <AuthProvider>
       <PatientProvider>
@@ -119,6 +123,11 @@ export default function App() {
             <Route path="/library" element={
               <ProtectedRoute>
                 <Layout><Library /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/settings" element={
+              <ProtectedRoute>
+                <Layout><Settings /></Layout>
               </ProtectedRoute>
             } />
             {/* Fallback routes */}
