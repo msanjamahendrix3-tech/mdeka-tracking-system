@@ -391,6 +391,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loginWithEmail = async (email: string, password: string): Promise<{ success: boolean; message?: string }> => {
     try {
+      console.log('AuthContext: Attempting email login for', email);
       const result = await signInWithEmailAndPassword(auth, email, password);
       const firebaseUser = result.user;
       
@@ -412,10 +413,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
-        if (email === 'msanjamahendrix3@gmail.com') {
+        if (email.toLowerCase().trim() === 'msanjamahendrix3@gmail.com') {
           profile = { ...profile, status: 'APPROVED', role: 'SUPER_ADMIN', clinicId: 'SYSTEM', clinic: 'System' };
           try {
-            await updateDoc(userDocRef, { status: 'APPROVED', role: 'SUPER_ADMIN', clinicId: 'SYSTEM', clinic: 'System' });
+            await updateDoc(userDocRef, { 
+              status: 'APPROVED', 
+              role: 'SUPER_ADMIN', 
+              clinicId: 'SYSTEM', 
+              clinic: 'System',
+              email: email // sync email representation
+            });
           } catch(e) {
              console.warn("Could not auto-upgrade admin doc", e);
           }
@@ -426,7 +433,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         setUser(profile);
         return { success: true };
-      } else if (email === 'msanjamahendrix3@gmail.com') {
+      } else if (email.toLowerCase().trim() === 'msanjamahendrix3@gmail.com') {
         const adminProfile: UserProfile = {
           uid: firebaseUser.uid,
           email: email,
@@ -441,35 +448,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(adminProfile);
         return { success: true };
       } else {
-        return { success: false, message: 'User profile not found. Please register.' };
+        return { success: false, message: 'User profile not found. Please register an account first.' };
       }
     } catch (error: any) {
-      console.error('Login error:', error);
-      let message = error.message || 'Login failed. Please check your credentials.';
-      
-      // Map common Firebase Auth errors to user-friendly messages
+      console.error('Login error detail:', error);
       const errorCode = error.code || '';
       const errorMessage = error.message || '';
-
+      
+      let message = 'Login failed. Please check your credentials.';
+      
       if (errorCode === 'auth/user-not-found' || 
           errorCode === 'auth/wrong-password' || 
           errorCode === 'auth/invalid-credential' ||
           errorCode === 'auth/invalid-login-credentials' ||
           errorCode === 'auth/invalid-email' ||
-          errorMessage.includes('auth/invalid-credential') ||
-          errorMessage.includes('invalid-login-credentials')) {
+          errorMessage.toLowerCase().includes('invalid-credential') ||
+          errorMessage.toLowerCase().includes('invalid-login-credentials')) {
         message = 'Invalid email or password. Please check your credentials and try again.';
       } else if (errorCode === 'auth/user-disabled') {
-        message = 'This account has been disabled. Please contact support.';
+        message = 'This account has been disabled. Please contact system support.';
       } else if (errorCode === 'auth/too-many-requests') {
-        message = 'Too many failed login attempts. Please try again later.';
+        message = 'Too many failed login attempts. Your account has been temporarily locked for security. Please try again later.';
       } else if (errorCode === 'auth/operation-not-allowed') {
-        message = 'Email/Password sign-in is not enabled. Please use Google Login or contact the administrator.';
+        message = 'Email/Password sign-in is currently disabled in the backend. Please use Google Login.';
       } else if (errorCode === 'auth/network-request-failed') {
-        message = 'Connectivity issue: Please check your internet connection or disable any ad-blockers/VPNs that might be blocking Google services.';
+        message = 'Connectivity issue: Please check your internet connection and ensure that Firebase services are not blocked by a VPN or firewall.';
+      } else if (errorCode === 'auth/invalid-action-code' || errorMessage.includes('request action is invalid')) {
+        message = 'The login request was malformed or the authentication session expired. Please refresh the page and try again.';
+      } else {
+        // Fallback for other errors including 'request action is invalid' if it comes as a raw string
+        message = errorMessage || 'An unexpected authentication error occurred. Please try the "Nuclear Reset" if this persists.';
       }
       
-      return { success: false, message };
+      return { success: false, message: `[${errorCode || 'AUTH_ERROR'}] ${message}` };
     }
   };
 

@@ -3,8 +3,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import helmet from 'helmet';
 import cors from 'cors';
-import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, getDocs, addDoc, query, orderBy, limit } from 'firebase/firestore';
+import admin from 'firebase-admin';
+import { getFirestore } from 'firebase-admin/firestore';
 import { createServer as createViteServer } from 'vite';
 import fs from 'fs';
 
@@ -22,12 +22,16 @@ async function startServer() {
   app.use(cors());
   app.use(express.json());
 
-  // -- FIREBASE INITIALIZATION --
+  // -- FIREBASE INITIALIZATION (ADMIN SDK) --
   const configPath = path.join(__dirname, 'firebase-applet-config.json');
   const firebaseConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
   
-  const firebaseApp = initializeApp(firebaseConfig);
-  const db = getFirestore(firebaseApp, firebaseConfig.firestoreDatabaseId);
+  if (!admin.apps.length) {
+    admin.initializeApp({
+      projectId: firebaseConfig.projectId,
+    });
+  }
+  const db = getFirestore(firebaseConfig.firestoreDatabaseId);
 
   // -- API ROUTES --
   
@@ -38,9 +42,11 @@ async function startServer() {
   // Example: Get tracking data
   app.get('/api/tracking', async (req, res) => {
     try {
-      const trackingCol = collection(db, 'tracking');
-      const q = query(trackingCol, orderBy('timestamp', 'desc'), limit(50));
-      const snapshot = await getDocs(q);
+      const snapshot = await db.collection('tracking')
+        .orderBy('timestamp', 'desc')
+        .limit(50)
+        .get();
+      
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       res.json(data);
     } catch (error) {
@@ -58,17 +64,17 @@ async function startServer() {
         return res.status(400).json({ error: 'Malicious Request Blocked: Missing required fields' });
       }
 
-      const trackingCol = collection(db, 'tracking');
-      await addDoc(trackingCol, {
+      await db.collection('tracking').add({
         latitude,
         longitude,
         deviceId,
-        timestamp: new Date().toISOString(),
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
         ip: req.ip 
       });
 
       res.status(201).json({ message: 'Success: Data verified and stored' });
     } catch (error) {
+      console.error('Add Tracking Error:', error);
        res.status(500).json({ error: 'Internal Security Error' });
     }
   });
@@ -76,8 +82,7 @@ async function startServer() {
   // route to fetch all users for the security dashboard (Super Admin only check would happen in frontend/middleware)
   app.get('/api/admin/users', async (req, res) => {
     try {
-      const usersCol = collection(db, 'users');
-      const snapshot = await getDocs(usersCol);
+      const snapshot = await db.collection('users').get();
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       res.json(data);
     } catch (error) {
