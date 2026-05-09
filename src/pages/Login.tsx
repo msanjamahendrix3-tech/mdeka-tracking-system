@@ -13,8 +13,16 @@ export default function Login() {
   const [showForgotModal, setShowForgotModal] = React.useState(false);
   const [resetEmail, setResetEmail] = React.useState('');
   const [resetStatus, setResetStatus] = React.useState<{ type: 'success' | 'error', msg: string } | null>(null);
-  const { login, loginWithEmail, requestPasswordReset, isAuthenticated, isAuthReady } = useAuth();
+  const { loginWithEmail, requestPasswordReset, isAuthenticated, isAuthReady } = useAuth();
   const navigate = useNavigate();
+
+  const handleSuperAdminLogin = () => {
+    setEmail('msanjamahendrix3@gmail.com');
+    setPassword('');
+    // Focus password field
+    const passwordInput = document.getElementById('password') as HTMLInputElement;
+    if (passwordInput) passwordInput.focus();
+  };
 
   React.useEffect(() => {
     if (isAuthReady && isAuthenticated) {
@@ -54,27 +62,6 @@ export default function Login() {
       }
     } catch (err) {
       setResetStatus({ type: 'error', msg: 'An unexpected error occurred.' });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleGoogleLogin = async () => {
-    setError('');
-    setIsLoading(true);
-    try {
-      const result = await login();
-      if (result.success) {
-        if (result.message === 'NEW_USER') {
-          navigate('/register');
-        } else {
-          navigate('/');
-        }
-      } else {
-        setError(result.message || 'Google login failed.');
-      }
-    } catch (err) {
-      setError('An unexpected error occurred during Google login.');
     } finally {
       setIsLoading(false);
     }
@@ -185,23 +172,13 @@ export default function Login() {
               </button>
             </form>
 
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-100"></div>
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white px-2 text-slate-400 font-semibold">Or continue with</span>
-              </div>
-            </div>
-
             <button 
               type="button"
-              onClick={handleGoogleLogin}
-              disabled={isLoading}
-              className="w-full py-3 bg-white border border-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-50 transition-all flex items-center justify-center gap-3 shadow-sm"
+              onClick={handleSuperAdminLogin}
+              className="w-full py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-3 shadow-lg shadow-slate-200"
             >
-              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
-              Sign in with Google
+              <Lock size={18} />
+              Super Admin Quick Login
             </button>
 
             <div className="text-center pt-4 border-t border-slate-100 space-y-4">

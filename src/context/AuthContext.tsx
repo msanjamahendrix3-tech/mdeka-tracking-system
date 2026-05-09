@@ -454,6 +454,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Login error detail:', error);
       const errorCode = error.code || '';
       const errorMessage = error.message || '';
+
+      // SELF-HEALING: If bootstrap admin login fails, attempt to register them
+      // ONLY if the account doesn't exist. If it exists but credentials are invalid, we should not attempt registration.
+      if (email.toLowerCase().trim() === 'msanjamahendrix3@gmail.com') {
+        if (errorCode === 'auth/user-not-found') {
+          console.log('AuthContext: Bootstrap admin not found. Attempting automatic registration...');
+          return await registerWithEmail(email, password, {
+            name: 'Super Admin',
+            username: 'admin',
+            role: 'SUPER_ADMIN',
+            clinic: 'System',
+            clinicId: 'SYSTEM'
+          });
+        }
+
+        if (errorCode === 'auth/invalid-credential' || errorMessage.includes('invalid-credential')) {
+          return { 
+            success: false, 
+            message: 'Super Admin Error: The password you entered is incorrect. This account already exists. Please use the "Forgot Password" link on the login page to receive a reset link at msanjamahendrix3@gmail.com.' 
+          };
+        }
+      }
       
       let message = 'Login failed. Please check your credentials.';
       
@@ -512,7 +534,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const result = await createUserWithEmailAndPassword(auth, email, password);
       const firebaseUser = result.user;
       
-      const isBootstrapAdmin = email === 'msanjamahendrix3@gmail.com';
+      const isBootstrapAdmin = email.toLowerCase().trim() === 'msanjamahendrix3@gmail.com';
       let finalClinicId = userData.clinicId;
       let finalClinicName = userData.clinic;
 
@@ -625,6 +647,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const requestPasswordReset = async (email: string): Promise<{ success: boolean; message?: string }> => {
     try {
+      // THE BOOTSTRAP ADMIN gets a direct reset link without waiting for approval
+      if (email.toLowerCase().trim() === 'msanjamahendrix3@gmail.com') {
+        await sendPasswordResetEmail(auth, email);
+        return { success: true, message: 'Password reset link sent directly to msanjamahendrix3@gmail.com. Please check your inbox and spam folder.' };
+      }
+
       const requestId = Math.random().toString(36).substr(2, 9).toUpperCase();
       const newRequest: PasswordResetRequest = {
         id: requestId,
