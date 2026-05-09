@@ -85,9 +85,9 @@ export default function AdminDashboard() {
   }, [user, getClinicById]);
 
   const filteredUsers = allUsers.filter(u => {
-    const matchesSearch = u.name.toLowerCase().includes(userSearch.toLowerCase()) ||
-      u.username.toLowerCase().includes(userSearch.toLowerCase()) ||
-      u.role.toLowerCase().includes(userSearch.toLowerCase());
+    const matchesSearch = (u.name || '').toLowerCase().includes(userSearch.toLowerCase()) ||
+      (u.username || '').toLowerCase().includes(userSearch.toLowerCase()) ||
+      (u.role || '').toLowerCase().includes(userSearch.toLowerCase());
     
     if (user?.role === 'SUPER_ADMIN') return matchesSearch;
     return matchesSearch && u.clinicId === user?.clinicId;
@@ -240,7 +240,7 @@ export default function AdminDashboard() {
                         <td className="px-8 py-4">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm">
-                              {u.name[0]}
+                              {u.name?.[0] || '?'}
                             </div>
                             <div>
                               <p className="text-sm font-bold text-slate-900">{u.name}</p>
@@ -290,7 +290,7 @@ export default function AdminDashboard() {
                         <td className="px-8 py-4">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-sm">
-                              {u.name[0]}
+                              {u.name?.[0] || '?'}
                             </div>
                             <div>
                               <p className="text-sm font-bold text-slate-900">{u.name}</p>
@@ -510,7 +510,7 @@ export default function AdminDashboard() {
                     <td className="px-8 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center font-bold text-blue-600 text-xs">
-                          {u.name[0]}
+                          {u.name?.[0] || '?'}
                         </div>
                         <div>
                           <p className="text-sm font-bold text-slate-900">{u.name}</p>

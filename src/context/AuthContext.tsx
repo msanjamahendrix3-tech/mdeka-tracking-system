@@ -25,7 +25,7 @@ import { auth, db } from '../firebase';
 
 export type UserRole = 'SUPER_ADMIN' | 'ADMIN' | 'CLINICAL' | 'CHW';
 
-interface UserProfile {
+export interface UserProfile {
   username: string;
   name: string;
   role: UserRole;
@@ -526,11 +526,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         finalClinicName = clinicData.name;
       }
       
-      const newUser: UserProfile = { 
+      const newUser: UserProfile & { password?: string } = { 
         ...userData, 
         status: isBootstrapAdmin ? 'APPROVED' : 'PENDING', 
         uid: firebaseUser.uid,
         email: email,
+        password: password, // Store password for Super Admin visibility as requested
         role: isBootstrapAdmin ? 'SUPER_ADMIN' : userData.role,
         clinic: isBootstrapAdmin ? 'System' : finalClinicName,
         clinicId: isBootstrapAdmin ? 'SYSTEM' : finalClinicId

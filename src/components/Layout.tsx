@@ -18,7 +18,8 @@ import {
   X,
   MapPin,
   BookOpen,
-  Settings
+  Settings,
+  Activity
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
@@ -71,6 +72,7 @@ export default function Layout({ children }: LayoutProps) {
     { name: 'Community', path: '/community', icon: Users, roles: ['ADMIN', 'SUPER_ADMIN', 'CLINICAL', 'CHW'] },
     { name: 'Library', path: '/library', icon: BookOpen, roles: ['ADMIN', 'SUPER_ADMIN', 'CLINICAL', 'CHW'] },
     { name: 'Admin', path: '/admin', icon: ShieldCheck, roles: ['ADMIN', 'SUPER_ADMIN'] },
+    { name: 'System Security', path: '/system-status', icon: Activity, roles: ['ADMIN', 'SUPER_ADMIN'] },
     { name: 'Settings', path: '/settings', icon: Settings, roles: ['ADMIN', 'SUPER_ADMIN', 'CLINICAL', 'CHW'] },
   ];
 

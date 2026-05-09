@@ -47,7 +47,7 @@ export default function NewFollowUp() {
     let targetPatientId = formData.patientId;
     if (!targetPatientId) {
       // Find patient by name if ID not set
-      const patient = patients.find(p => p.name.toLowerCase() === formData.patientName.toLowerCase());
+      const patient = patients.find(p => (p.name || '').toLowerCase() === (formData.patientName || '').toLowerCase());
       if (patient) {
         targetPatientId = patient.id;
       } else {

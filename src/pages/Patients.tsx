@@ -31,8 +31,8 @@ export default function Patients() {
   const navigate = useNavigate();
 
   const filteredPatients = patients.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.phone.includes(searchTerm) ||
+    const matchesSearch = (p.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (p.phone || '').includes(searchTerm) ||
       (p.department || '').toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === 'All' || p.status === statusFilter;
@@ -54,7 +54,7 @@ export default function Patients() {
               <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-blue-200">
-                    {selectedPatient.name[0]}
+                    {selectedPatient.name?.[0] || '?'}
                   </div>
                   <div>
                     <h2 className="text-xl font-bold text-slate-900">{selectedPatient.name}</h2>
@@ -301,7 +301,7 @@ export default function Patients() {
                     <td className="px-8 py-5">
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center font-bold text-blue-600 text-lg">
-                          {patient.name[0]}
+                          {patient.name?.[0] || '?'}
                         </div>
                         <div>
                           <p className="font-bold text-slate-900">{patient.name}</p>

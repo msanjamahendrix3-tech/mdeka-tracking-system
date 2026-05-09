@@ -172,9 +172,9 @@ export default function Library() {
   };
 
   const filteredResources = resources.filter(resource => {
-    const matchesSearch = resource.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                         resource.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         resource.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesSearch = (resource.title || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+                         (resource.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         (resource.tags || []).some(tag => (tag || '').toLowerCase().includes(searchQuery.toLowerCase()));
     
     const matchesCategory = activeCategory === 'All' || resource.category === activeCategory;
     

@@ -50,7 +50,7 @@ export default function Settings() {
               <h2 className="text-lg font-bold text-slate-800 mb-4 border-b border-slate-100 pb-2">Profile Information</h2>
               <div className="flex items-center gap-4 mb-6">
                 <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-2xl font-bold">
-                  {user?.name.split(' ').map(n => n[0]).join('')}
+                  {(user?.name || 'User').split(' ').map(n => n[0]).join('')}
                 </div>
                 <div>
                   <h3 className="font-bold text-slate-800">{user?.name}</h3>
@@ -65,7 +65,7 @@ export default function Settings() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Email / Username</label>
-                  <input type="text" defaultValue={user?.uid.replace(/_/g, '').toLowerCase() + '@mdek.health'} className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl" readOnly />
+                  <input type="text" defaultValue={(user?.uid || '').replace(/_/g, '').toLowerCase() + '@mdek.health'} className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl" readOnly />
                 </div>
               </div>
             </motion.div>

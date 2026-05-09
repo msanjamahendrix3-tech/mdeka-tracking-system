@@ -14,7 +14,7 @@ export function SecurityAuditModal({ isOpen, onClose, users }: SecurityAuditModa
 
   const unverifiedUsers = users.filter(u => u.status === 'PENDING');
   const superAdmins = users.filter(u => u.role === 'SUPER_ADMIN');
-  const activeAdmins = users.filter(u => u.role === 'ADMIN' && u.status === 'ACTIVE');
+  const activeAdmins = users.filter(u => u.role === 'ADMIN' && u.status === 'APPROVED');
 
   return (
     <AnimatePresence>

@@ -16,6 +16,7 @@ import AddPatient from './pages/AddPatient';
 import FollowUp from './pages/FollowUp';
 import Community from './pages/Community';
 import AdminDashboard from './pages/AdminDashboard';
+import SystemStatus from './pages/SystemStatus';
 import Login from './pages/Login';
 import CHWDashboard from './pages/CHWDashboard';
 import NewFollowUp from './pages/NewFollowUp';
@@ -120,6 +121,11 @@ export default function App() {
             <Route path="/admin" element={
               <ProtectedRoute roles={['ADMIN', 'SUPER_ADMIN']}>
                 <Layout><AdminDashboard /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/system-status" element={
+              <ProtectedRoute roles={['ADMIN', 'SUPER_ADMIN']}>
+                <Layout><SystemStatus /></Layout>
               </ProtectedRoute>
             } />
             <Route path="/library" element={
