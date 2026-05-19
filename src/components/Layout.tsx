@@ -66,9 +66,10 @@ export default function Layout({ children }: LayoutProps) {
   const navItems = [
     { name: 'Home', path: '/', icon: HomeIcon, roles: ['ADMIN', 'SUPER_ADMIN', 'CLINICAL', 'CHW'] },
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, roles: ['ADMIN', 'SUPER_ADMIN', 'CLINICAL', 'CHW'] },
-    { name: 'Patients', path: '/patients', icon: Users, roles: ['ADMIN', 'SUPER_ADMIN', 'CLINICAL'] },
+    { name: 'Patients', path: '/patients', icon: Users, roles: ['ADMIN', 'SUPER_ADMIN', 'CLINICAL', 'CHW'] },
     { name: 'Add Patient', path: '/add-patient', icon: UserPlus, roles: ['ADMIN', 'SUPER_ADMIN', 'CLINICAL'] },
     { name: 'Follow Up', path: '/follow-up', icon: ClipboardList, roles: ['ADMIN', 'SUPER_ADMIN', 'CLINICAL', 'CHW'] },
+    { name: 'Followed Up Patients', path: '/followed-up-dashboard', icon: ClipboardList, roles: ['ADMIN', 'SUPER_ADMIN', 'CLINICAL', 'CHW'] },
     { name: 'Community', path: '/community', icon: Users, roles: ['ADMIN', 'SUPER_ADMIN', 'CLINICAL', 'CHW'] },
     { name: 'Library', path: '/library', icon: BookOpen, roles: ['ADMIN', 'SUPER_ADMIN', 'CLINICAL', 'CHW'] },
     { name: 'Admin', path: '/admin', icon: ShieldCheck, roles: ['ADMIN', 'SUPER_ADMIN'] },
@@ -107,7 +108,7 @@ export default function Layout({ children }: LayoutProps) {
           {isSidebarOpen && (
             <div className="flex flex-col min-w-0">
               <span className="font-bold text-slate-800 text-lg tracking-tight truncate leading-none">
-                MDEKA TRACKING SYSTEM
+                HOSPITAL TRACKING SYSTEM
               </span>
               <span className="text-[10px] text-blue-600 font-bold uppercase truncate">
                 {user?.clinic || 'Clinic'}

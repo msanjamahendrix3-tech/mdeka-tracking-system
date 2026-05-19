@@ -17,20 +17,46 @@ import {
   Activity,
   HeartPulse,
   User,
-  Trash2
+  Trash2,
+  CheckCircle2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 export default function Patients() {
-  const { patients, exportPatients, deletePatient } = usePatients();
+  const { patients, exportPatients, deletePatient, addFollowUp } = usePatients();
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState<string>('All');
   const [selectedPatient, setSelectedPatient] = React.useState<Patient | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const scheduledVisit = selectedPatient?.followUps?.find(f => f.status === 'Scheduled');
+
+  React.useEffect(() => {
+    if (location.state?.selectedPatientId) {
+      const patient = patients.find(p => p.id === location.state.selectedPatientId);
+      if (patient) {
+        setSelectedPatient(patient);
+      }
+    }
+  }, [location.state, patients]);
 
   const filteredPatients = patients.filter(p => {
+    // Once a patient has been followed up by a CHW (i.e., has a completed follow-up), 
+    // we automatically remove them from the active patients list
+    const isCompleted = p.followUps?.some(f => f.status === 'Completed');
+    if (isCompleted) return false;
+
+    // If the user's role is CHW, they must ONLY see patients assigned directly to them.
+    if (user?.role === 'CHW') {
+      if (p.assignedCHW !== user?.name) return false;
+    } else {
+      // For other roles (admins, clinical staff), keep all patients visible even if being followed up by a CHW
+      // This allows administrators to track progress and view status.
+    }
+
     const matchesSearch = (p.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (p.phone || '').includes(searchTerm) ||
       (p.department || '').toLowerCase().includes(searchTerm.toLowerCase());
@@ -124,6 +150,86 @@ export default function Patients() {
                   </div>
 
                   <div className="md:col-span-2 space-y-6">
+                    {/* Scheduled Field Visit display / creation */}
+                    <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 space-y-4">
+                      <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                        <Calendar size={18} className="text-blue-600" /> Scheduled Field Visit
+                      </h3>
+                      {scheduledVisit ? (
+                        <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 space-y-3">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="text-sm font-bold text-blue-900">
+                                {new Date(scheduledVisit.date).toLocaleDateString()} at {new Date(scheduledVisit.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                              <p className="text-xs text-blue-700 font-medium mt-1">Officer: {scheduledVisit.officer}</p>
+                            </div>
+                            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-[9px] font-bold uppercase rounded">
+                              Scheduled
+                            </span>
+                          </div>
+                          {scheduledVisit.notes && (
+                            <p className="text-xs text-slate-500 italic">Notes: {scheduledVisit.notes}</p>
+                          )}
+                          <div className="pt-2">
+                            <button
+                              onClick={() => {
+                                setSelectedPatient(null);
+                                navigate(`/start-visit/${selectedPatient.id}`);
+                              }}
+                              className="px-4 py-2 bg-blue-600 text-white font-semibold text-xs rounded-lg hover:bg-blue-700 transition-all shadow-md shadow-blue-100 flex items-center gap-1.5"
+                            >
+                              <CheckCircle2 size={13} /> Record / Start Visit Now
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <p className="text-xs text-slate-500">This patient does not currently have a scheduled home visit.</p>
+                          <div className="flex flex-col sm:flex-row gap-2">
+                            <input 
+                              type="datetime-local"
+                              id="scheduleDateTimeInModal"
+                              className="text-xs px-3 py-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 flex-1"
+                            />
+                            <button
+                              onClick={async () => {
+                                const input = document.getElementById('scheduleDateTimeInModal') as HTMLInputElement;
+                                if (!input || !input.value) {
+                                  alert('Please select a valid date and time first.');
+                                  return;
+                                }
+                                const selectedDate = new Date(input.value).toISOString();
+                                await addFollowUp(selectedPatient.id, {
+                                  date: selectedDate,
+                                  officer: user?.name || 'Clinic Staff',
+                                  status: 'Scheduled',
+                                  notes: 'Scheduled home health visit'
+                                });
+                                // Update selectedPatient locally to show the visit Scheduled state instantly
+                                setSelectedPatient(prev => prev ? {
+                                  ...prev,
+                                  followUps: [
+                                    {
+                                      id: Math.random().toString(36).substr(2, 9),
+                                      date: selectedDate,
+                                      officer: user?.name || 'Clinic Staff',
+                                      status: 'Scheduled',
+                                      notes: 'Scheduled home health visit'
+                                    },
+                                    ...(prev.followUps || [])
+                                  ]
+                                } : null);
+                              }}
+                              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl transition-all shadow-md shadow-blue-100 whitespace-nowrap"
+                            >
+                              Schedule Visit
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
                     <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 space-y-4">
                       <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                         <History size={18} className="text-blue-600" /> Follow-up History
@@ -189,15 +295,27 @@ export default function Patients() {
                 >
                   Close
                 </button>
-                <button 
-                  onClick={() => {
-                    setSelectedPatient(null);
-                    navigate('/new-follow-up', { state: { patientId: selectedPatient.id } });
-                  }}
-                  className="px-6 py-2 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200"
-                >
-                  Schedule Follow-up
-                </button>
+                {user?.role === 'CHW' ? (
+                  <button 
+                    onClick={() => {
+                      setSelectedPatient(null);
+                      navigate(`/start-visit/${selectedPatient.id}`);
+                    }}
+                    className="px-6 py-2 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200"
+                  >
+                    Start Visit Session
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => {
+                      setSelectedPatient(null);
+                      navigate('/new-follow-up', { state: { patientId: selectedPatient.id } });
+                    }}
+                    className="px-6 py-2 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200"
+                  >
+                    Schedule Follow-up
+                  </button>
+                )}
               </div>
             </motion.div>
           </div>
@@ -206,8 +324,12 @@ export default function Patients() {
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Patient Directory</h1>
-          <p className="text-slate-500">Manage and view all registered patients in the system.</p>
+          <h1 className="text-3xl font-bold text-slate-900">{user?.role === 'CHW' ? 'My Assigned Patients' : 'Patient Directory'}</h1>
+          <p className="text-slate-500">
+            {user?.role === 'CHW' 
+              ? 'View and manage patients currently assigned to you.' 
+              : "View and manage all patients. Admins have complete visibility over patients who are being followed up."}
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <button 
@@ -216,12 +338,14 @@ export default function Patients() {
           >
             <Download size={18} /> Export CSV
           </button>
-          <button 
-            onClick={() => navigate('/add-patient')}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 rounded-xl text-sm font-medium text-white hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200"
-          >
-            <UserPlus size={18} /> Add Patient
-          </button>
+          {user?.role !== 'CHW' && (
+            <button 
+              onClick={() => navigate('/add-patient')}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 rounded-xl text-sm font-medium text-white hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200"
+            >
+              <UserPlus size={18} /> Add Patient
+            </button>
+          )}
         </div>
       </div>
 
@@ -254,7 +378,7 @@ export default function Patients() {
               ))}
             </div>
             <span className="text-sm text-slate-400 font-medium ml-2">
-              Showing {filteredPatients.length} patients
+              {user?.role === 'CHW' ? `${filteredPatients.length} Assigned Patients` : `${filteredPatients.length} Total Patients`}
             </span>
           </div>
         </div>

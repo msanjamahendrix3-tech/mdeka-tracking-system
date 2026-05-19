@@ -30,10 +30,20 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { usePatients } from '../context/PatientContext';
+import { useAuth } from '../context/AuthContext';
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { patients } = usePatients();
+  const { patients: allPatients } = usePatients();
+  const { user } = useAuth();
+
+  // Filter out patients who have already been followed up by a CHW (i.e. has any Completed followUps)
+  const activePatients = allPatients.filter(p => !p.followUps?.some(f => f.status === 'Completed'));
+
+  // If the user is a CHW, they must only see metrics for patients assigned directly to them.
+  const patients = user?.role === 'CHW'
+    ? activePatients.filter(p => p.assignedCHW === user?.name)
+    : activePatients;
 
   const healthMetrics = [
     { name: 'Normal', value: patients.filter(p => p.status === 'Normal').length, color: '#3b82f6' },
@@ -67,6 +77,48 @@ export default function Dashboard() {
     }).length
   }));
 
+  const exportDashboardReport = () => {
+    const totalCount = patients.length;
+    const normalCount = patients.filter(p => p.status === 'Normal').length;
+    const atRiskCount = patients.filter(p => p.status === 'At Risk').length;
+    const criticalCount = patients.filter(p => p.status === 'Critical').length;
+    
+    const ncdCount = patients.filter(p => (p.department || p.clinic) === 'NCD').length;
+    const epilepsyCount = patients.filter(p => (p.department || p.clinic) === 'Epilepsy').length;
+    const malariaCount = patients.filter(p => (p.department || p.clinic) === 'Malaria').length;
+    const underFiveCount = patients.filter(p => (p.department || p.clinic) === 'UnderFive').length;
+
+    let csvContent = "HOSPITAL TRACKING SYSTEM - DASHBOARD STATUS REPORT\n";
+    csvContent += `Generated On,${new Date().toLocaleString()}\n`;
+    csvContent += `User,${user?.name || 'Administrator'} (${user?.role || 'Admin'})\n\n`;
+    csvContent += "METRIC,VALUE,PERCENTAGE\n";
+    csvContent += `Total Patients,${totalCount},100%\n`;
+    csvContent += `Normal Health Status,${normalCount},${totalCount > 0 ? ((normalCount/totalCount)*100).toFixed(0) : 0}%\n`;
+    csvContent += `At Risk Status,${atRiskCount},${totalCount > 0 ? ((atRiskCount/totalCount)*100).toFixed(0) : 0}%\n`;
+    csvContent += `Critical Status,${criticalCount},${totalCount > 0 ? ((criticalCount/totalCount)*100).toFixed(0) : 0}%\n\n`;
+    
+    csvContent += "CLINIC / DEPARTMENT,PATIENT COUNT\n";
+    csvContent += `NCD Clinic,${ncdCount}\n`;
+    csvContent += `Epilepsy Clinic,${epilepsyCount}\n`;
+    csvContent += `Malaria Positive,${malariaCount}\n`;
+    csvContent += `Under Five Clinic,${underFiveCount}\n\n`;
+
+    csvContent += "MONTH,PATIENTS RECRUITED / REGISTERED\n";
+    patientGrowthData.forEach(item => {
+      csvContent += `${item.name},${item.patients}\n`;
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `hospital_dashboard_report_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -79,7 +131,10 @@ export default function Dashboard() {
           <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
             <Filter size={18} /> Filter
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 rounded-xl text-sm font-medium text-white hover:bg-blue-700 transition-colors">
+          <button 
+            onClick={exportDashboardReport}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 rounded-xl text-sm font-medium text-white hover:bg-blue-700 transition-colors cursor-pointer"
+          >
             <Download size={18} /> Export Report
           </button>
         </div>

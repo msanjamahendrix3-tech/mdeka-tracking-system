@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { usePatients } from '../context/PatientContext';
+import { useAuth } from '../context/AuthContext';
 
 const features = [
   {
@@ -47,7 +48,16 @@ const features = [
 
 export default function Home() {
   const navigate = useNavigate();
-  const { patients } = usePatients();
+  const { patients: allPatients } = usePatients();
+  const { user } = useAuth();
+
+  // Filter out patients who have already been followed up by a CHW (i.e. has any Completed followUps)
+  const activePatients = allPatients.filter(p => !p.followUps?.some(f => f.status === 'Completed'));
+
+  // If the user is a CHW, only get count for their assigned patients
+  const patients = user?.role === 'CHW'
+    ? activePatients.filter(p => p.assignedCHW === user?.name)
+    : activePatients;
 
   return (
     <div className="space-y-12">
@@ -60,7 +70,7 @@ export default function Home() {
             className="inline-flex items-center gap-2 px-3 py-1 bg-blue-500/30 backdrop-blur-sm rounded-full text-sm font-medium"
           >
             <Heart size={16} className="text-blue-200" />
-            <span>Welcome to MDEKA TRACKING SYSTEM</span>
+            <span>Welcome to HOSPITAL TRACKING SYSTEM</span>
           </motion.div>
           <motion.h1 
             initial={{ opacity: 0, y: 20 }}
@@ -115,7 +125,7 @@ export default function Home() {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {[
-          { label: 'Total Patients', value: patients.length.toString(), icon: Users, color: 'text-blue-600', bg: 'bg-blue-50', path: '/patients' },
+          { label: user?.role === 'CHW' ? 'My Assigned Patients' : 'Total Patients', value: patients.length.toString(), icon: Users, color: 'text-blue-600', bg: 'bg-blue-50', path: '/patients' },
           { label: 'Appointments Today', value: '42', icon: Calendar, color: 'text-emerald-600', bg: 'bg-emerald-50', path: '/appointments' },
           { label: 'Active Doctors', value: '18', icon: ShieldCheck, color: 'text-purple-600', bg: 'bg-purple-50', path: '/community' },
           { label: 'Avg. Wait Time', value: '12m', icon: Clock, color: 'text-orange-600', bg: 'bg-orange-50', path: '/dashboard' },

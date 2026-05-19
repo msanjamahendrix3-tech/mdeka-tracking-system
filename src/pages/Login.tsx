@@ -80,7 +80,7 @@ export default function Login() {
               <Stethoscope size={32} />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">MDEKA TRACKING SYSTEM</h1>
+              <h1 className="text-2xl font-bold tracking-tight">HOSPITAL TRACKING SYSTEM</h1>
               <p className="text-blue-100 text-sm">Secure access for health professionals</p>
             </div>
           </div>

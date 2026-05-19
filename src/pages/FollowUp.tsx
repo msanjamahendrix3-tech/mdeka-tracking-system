@@ -16,13 +16,20 @@ import {
 import { motion } from 'motion/react';
 
 import { usePatients } from '../context/PatientContext';
+import { useAuth } from '../context/AuthContext';
 
 export default function FollowUp() {
   const navigate = useNavigate();
   const { patients, addFollowUp } = usePatients();
+  const { user } = useAuth();
+
+  // If the useris a CHW, only retrieve patients assigned to them
+  const visiblePatients = user?.role === 'CHW'
+    ? patients.filter(p => p.assignedCHW === user?.name)
+    : patients;
 
   // Get all follow-ups from all patients
-  const allFollowUps = patients.flatMap(p => 
+  const allFollowUps = visiblePatients.flatMap(p => 
     (p.followUps || []).map(f => ({
       ...f,
       patientName: p.name,
@@ -49,12 +56,14 @@ export default function FollowUp() {
           <h1 className="text-3xl font-bold text-slate-900">Follow-up Management</h1>
           <p className="text-slate-500">Track and manage patient follow-up appointments and reports.</p>
         </div>
-        <button 
-          onClick={() => navigate('/new-follow-up')}
-          className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all"
-        >
-          <Plus size={20} /> New Follow-up
-        </button>
+        {user?.role !== 'CHW' && (
+          <button 
+            onClick={() => navigate('/new-follow-up')}
+            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all"
+          >
+            <Plus size={20} /> New Follow-up
+          </button>
+        )}
       </div>
 
       {/* Search and Filter */}
@@ -181,7 +190,7 @@ export default function FollowUp() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.05 }}
                 className="p-6 hover:bg-slate-50 transition-all cursor-pointer group"
-                onClick={() => navigate('/patients')}
+                onClick={() => navigate('/patients', { state: { selectedPatientId: item.patientId } })}
               >
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                   <div className="flex items-center gap-4">

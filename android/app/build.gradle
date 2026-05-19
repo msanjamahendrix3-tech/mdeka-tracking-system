@@ -1,5 +1,28 @@
 apply plugin: 'com.android.application'
 
+// AUTOMATIC WEB SYNC
+// This task runs npm run build and cap copy whenever you build in Android Studio
+task webBuild(type: Exec) {
+    workingDir "../../"
+    if (System.getProperty('os.name').toLowerCase().contains('windows')) {
+        commandLine 'npm.cmd', 'run', 'build'
+    } else {
+        commandLine 'npm', 'run', 'build'
+    }
+}
+
+task capCopy(type: Exec) {
+    dependsOn webBuild
+    workingDir "../../"
+    if (System.getProperty('os.name').toLowerCase().contains('windows')) {
+        commandLine 'npx.cmd', 'cap', 'copy', 'android'
+    } else {
+        commandLine 'npx', 'cap', 'copy', 'android'
+    }
+}
+
+preBuild.dependsOn capCopy
+
 android {
     namespace = "com.mdeka.health"
     compileSdk = rootProject.ext.compileSdkVersion

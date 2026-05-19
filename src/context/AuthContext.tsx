@@ -453,11 +453,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error: any) {
       console.error('Login error detail:', error);
       const errorCode = error.code || '';
-      const errorMessage = error.message || '';
+      const errorMessage = (error.message || '').toLowerCase();
+      const userEmail = email.toLowerCase().trim();
 
-      // SELF-HEALING: If bootstrap admin login fails, attempt to register them
-      // ONLY if the account doesn't exist. If it exists but credentials are invalid, we should not attempt registration.
-      if (email.toLowerCase().trim() === 'msanjamahendrix3@gmail.com') {
+      // SELF-HEALING & SPECIAL HELP FOR SUPER ADMIN
+      if (userEmail === 'msanjamahendrix3@gmail.com') {
+        // If the user is definitely not found, try to auto-create
         if (errorCode === 'auth/user-not-found') {
           console.log('AuthContext: Bootstrap admin not found. Attempting automatic registration...');
           return await registerWithEmail(email, password, {
@@ -469,10 +470,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           });
         }
 
-        if (errorCode === 'auth/invalid-credential' || errorMessage.includes('invalid-credential')) {
+        // Catch both specific error codes AND generic "invalid-credential" which Firebase uses now
+        if (errorCode === 'auth/invalid-credential' || 
+            errorCode === 'auth/wrong-password' || 
+            errorMessage.includes('invalid-credential') || 
+            errorMessage.includes('wrong-password')) {
           return { 
             success: false, 
-            message: 'Super Admin Error: The password you entered is incorrect. This account already exists. Please use the "Forgot Password" link on the login page to receive a reset link at msanjamahendrix3@gmail.com.' 
+            message: 'Super Admin Access Locked: The password you entered is incorrect. If you have forgotten your password, please use the "Forgot Password" option on the login screen to receive a reset link at msanjamahendrix3@gmail.com.' 
           };
         }
       }

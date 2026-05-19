@@ -27,6 +27,7 @@ import StartVisit from './pages/StartVisit';
 import Library from './pages/Library';
 import NCDRegistration from './pages/NCDRegistration';
 import Settings from './pages/Settings';
+import FollowedUpDashboard from './pages/FollowedUpDashboard';
 import { MalawiBackground } from './components/MalawiBackground';
 
 function ProtectedRoute({ children, roles }: { children: React.ReactNode, roles?: string[] }) {
@@ -84,7 +85,7 @@ export default function App() {
               </ProtectedRoute>
             } />
             <Route path="/patients" element={
-              <ProtectedRoute roles={['ADMIN', 'CLINICAL', 'SUPER_ADMIN']}>
+              <ProtectedRoute roles={['ADMIN', 'CLINICAL', 'CHW', 'SUPER_ADMIN']}>
                 <Layout><Patients /></Layout>
               </ProtectedRoute>
             } />
@@ -101,6 +102,11 @@ export default function App() {
             <Route path="/follow-up" element={
               <ProtectedRoute>
                 <Layout><FollowUp /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/followed-up-dashboard" element={
+              <ProtectedRoute roles={['ADMIN', 'SUPER_ADMIN', 'CLINICAL', 'CHW']}>
+                <Layout><FollowedUpDashboard /></Layout>
               </ProtectedRoute>
             } />
             <Route path="/new-follow-up" element={

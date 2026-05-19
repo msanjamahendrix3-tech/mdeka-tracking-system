@@ -19,6 +19,13 @@ export interface FollowUpRecord {
   officer: string;
   notes: string;
   status: 'Completed' | 'Missed' | 'Scheduled';
+  opdNumber?: string;
+  medications?: string;
+  symptoms?: string;
+  temperature?: string;
+  bloodPressure?: string;
+  photoUrl?: string;
+  photoComment?: string;
 }
 
 export interface Patient {
@@ -56,7 +63,8 @@ enum OperationType {
 interface PatientContextType {
   patients: Patient[];
   addPatient: (patient: Omit<Patient, 'id' | 'registeredAt' | 'status' | 'followUps' | 'clinic' | 'clinicId'>) => Promise<void>;
-  addFollowUp: (patientId: string, followUp: Omit<FollowUpRecord, 'id'>) => Promise<void>;
+  assignCHW: (patientId: string, chwName: string) => Promise<void>;
+  addFollowUp: (patientId: string, followUp: Omit<FollowUpRecord, 'id'>, chwName?: string) => Promise<void>;
   deletePatient: (patientId: string) => Promise<void>;
   exportPatients: () => void;
 }
@@ -128,7 +136,17 @@ export function PatientProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const addFollowUp = async (patientId: string, followUpData: Omit<FollowUpRecord, 'id'>) => {
+  const assignCHW = async (patientId: string, chwName: string) => {
+    try {
+      await updateDoc(doc(db, 'patients', patientId), {
+        assignedCHW: chwName
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `patients/${patientId}`);
+    }
+  };
+
+  const addFollowUp = async (patientId: string, followUpData: Omit<FollowUpRecord, 'id'>, chwName?: string) => {
     const newFollowUp: FollowUpRecord = {
       ...followUpData,
       id: Math.random().toString(36).substr(2, 9)
@@ -140,9 +158,15 @@ export function PatientProvider({ children }: { children: React.ReactNode }) {
     const updatedFollowUps = [newFollowUp, ...(patient.followUps || [])];
     
     try {
-      await updateDoc(doc(db, 'patients', patientId), {
+      const updateData: any = {
         followUps: updatedFollowUps
-      });
+      };
+
+      if (chwName) {
+        updateData.assignedCHW = chwName;
+      }
+
+      await updateDoc(doc(db, 'patients', patientId), updateData);
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `patients/${patientId}`);
     }
@@ -193,7 +217,7 @@ export function PatientProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <PatientContext.Provider value={{ patients, addPatient, addFollowUp, deletePatient, exportPatients }}>
+    <PatientContext.Provider value={{ patients, addPatient, assignCHW, addFollowUp, deletePatient, exportPatients }}>
       {children}
     </PatientContext.Provider>
   );

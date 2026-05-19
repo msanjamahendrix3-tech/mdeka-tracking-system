@@ -56,12 +56,16 @@ export default function NewFollowUp() {
       }
     }
 
-    addFollowUp(targetPatientId, {
-      date: `${formData.followUpDate}T${formData.followUpTime}:00Z`,
-      officer: formData.chwName || 'Clinic Staff',
-      status: 'Scheduled',
-      notes: formData.reason + (formData.notes ? ': ' + formData.notes : '')
-    });
+    addFollowUp(
+      targetPatientId, 
+      {
+        date: `${formData.followUpDate}T${formData.followUpTime}:00Z`,
+        officer: formData.chwName || 'Clinic Staff',
+        status: 'Scheduled',
+        notes: formData.reason + (formData.notes ? ': ' + formData.notes : '')
+      },
+      formData.assignCHW ? formData.chwName : undefined
+    );
 
     navigate('/follow-up');
   };
