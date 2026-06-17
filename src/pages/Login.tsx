@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Stethoscope, AlertCircle, User, Lock, X, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import hospitalLogo from '../assets/images/hospital_logo_1779218652866.png';
 
 export default function Login() {
   const [email, setEmail] = React.useState('');
@@ -76,8 +77,13 @@ export default function Login() {
       >
         <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/60 border border-slate-100 overflow-hidden">
           <div className="p-8 bg-blue-600 text-white text-center space-y-4">
-            <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto backdrop-blur-sm">
-              <Stethoscope size={32} />
+            <div className="w-16 h-16 rounded-2xl overflow-hidden flex items-center justify-center mx-auto bg-slate-900 shadow-lg border border-slate-800">
+              <img 
+                src={hospitalLogo} 
+                alt="Hospital Tracking System Logo" 
+                className="w-full h-full object-cover" 
+                referrerPolicy="no-referrer"
+              />
             </div>
             <div>
               <h1 className="text-2xl font-bold tracking-tight">HOSPITAL TRACKING SYSTEM</h1>

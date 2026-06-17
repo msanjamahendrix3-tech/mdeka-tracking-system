@@ -20,7 +20,7 @@ import { useAuth } from '../context/AuthContext';
 
 export default function FollowUp() {
   const navigate = useNavigate();
-  const { patients, addFollowUp } = usePatients();
+  const { patients, addFollowUp, updateFollowUpStatus } = usePatients();
   const { user } = useAuth();
 
   // If the useris a CHW, only retrieve patients assigned to them
@@ -42,11 +42,11 @@ export default function FollowUp() {
   const upcomingFollowUps = allFollowUps.filter(f => f.status === 'Scheduled');
 
   const handleMarkVisited = (patientId: string, followUpId: string) => {
-    // In a real app, we would update the specific follow-up status
-    // For now, let's just add a new "Completed" follow-up or update the existing one
-    // Since addFollowUp adds a new one, I'll just use that for simplicity or implement a status update
-    // Let's implement a simple status update in PatientContext if needed, but for now I'll just log it
-    console.log('Marking as visited:', patientId, followUpId);
+    updateFollowUpStatus(patientId, followUpId, 'Completed');
+  };
+
+  const handleMarkMissed = (patientId: string, followUpId: string) => {
+    updateFollowUpStatus(patientId, followUpId, 'Missed');
   };
 
   return (
@@ -229,11 +229,20 @@ export default function FollowUp() {
                   </div>
   
                   <div className="flex items-center gap-2">
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handleMarkVisited(item.patientId, item.id); }}
+                      className="px-3 py-1.5 text-xs font-bold bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors"
+                    >
+                      Completed
+                    </button>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handleMarkMissed(item.patientId, item.id); }}
+                      className="px-3 py-1.5 text-xs font-bold bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+                    >
+                      Missed
+                    </button>
                     <button className="p-2 hover:bg-blue-50 hover:text-blue-600 rounded-lg text-slate-400 transition-all" title="View Details">
                       <FileText size={20} />
-                    </button>
-                    <button className="p-2 hover:bg-blue-50 hover:text-blue-600 rounded-lg text-slate-400 transition-all">
-                      <ChevronRight size={20} />
                     </button>
                   </div>
                 </div>

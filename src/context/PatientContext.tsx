@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { useAuth, handleFirestoreError } from './AuthContext';
+import { useNotifications } from './NotificationContext';
 
 export interface FollowUpRecord {
   id: string;
@@ -65,6 +66,7 @@ interface PatientContextType {
   addPatient: (patient: Omit<Patient, 'id' | 'registeredAt' | 'status' | 'followUps' | 'clinic' | 'clinicId'>) => Promise<void>;
   assignCHW: (patientId: string, chwName: string) => Promise<void>;
   addFollowUp: (patientId: string, followUp: Omit<FollowUpRecord, 'id'>, chwName?: string) => Promise<void>;
+  updateFollowUpStatus: (patientId: string, followUpId: string, status: 'Completed' | 'Missed' | 'Scheduled') => Promise<void>;
   deletePatient: (patientId: string) => Promise<void>;
   exportPatients: () => void;
 }
@@ -73,7 +75,8 @@ const PatientContext = createContext<PatientContextType | undefined>(undefined);
 
 export function PatientProvider({ children }: { children: React.ReactNode }) {
   const [patients, setPatients] = useState<Patient[]>([]);
-  const { user, isAuthenticated, isAuthReady } = useAuth();
+  const { user, isAuthenticated, isAuthReady, allUsers } = useAuth();
+  const { addNotification } = useNotifications();
 
   useEffect(() => {
     // Only subscribe if auth is ready and user is authorized (Approved or Admin)
@@ -141,6 +144,16 @@ export function PatientProvider({ children }: { children: React.ReactNode }) {
       await updateDoc(doc(db, 'patients', patientId), {
         assignedCHW: chwName
       });
+      const chwUser = allUsers.find(u => u.name === chwName && u.role === 'CHW');
+      if (chwUser) {
+        const patient = patients.find(p => p.id === patientId);
+        await addNotification({
+          userId: chwUser.uid,
+          title: 'New Patient Assignment',
+          message: `You have been assigned to patient ${patient?.name || 'Unknown'}.`,
+          type: 'INFO',
+        });
+      }
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `patients/${patientId}`);
     }
@@ -167,6 +180,48 @@ export function PatientProvider({ children }: { children: React.ReactNode }) {
       }
 
       await updateDoc(doc(db, 'patients', patientId), updateData);
+      
+      if (chwName && followUpData.status === 'Scheduled') {
+         const chwUser = allUsers.find(u => u.name === chwName && u.role === 'CHW');
+         if (chwUser) {
+           await addNotification({
+             userId: chwUser.uid,
+             title: 'New Follow-up Assignment',
+             message: `You have been assigned a scheduled follow-up appointment for ${patient.name}.`,
+             type: 'INFO'
+           });
+         }
+      }
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `patients/${patientId}`);
+    }
+  };
+
+  const updateFollowUpStatus = async (patientId: string, followUpId: string, status: 'Completed' | 'Missed' | 'Scheduled') => {
+    const patient = patients.find(p => p.id === patientId);
+    if (!patient || !patient.followUps) return;
+
+    const updatedFollowUps = patient.followUps.map(f =>
+      f.id === followUpId ? { ...f, status } : f
+    );
+
+    try {
+      await updateDoc(doc(db, 'patients', patientId), {
+        followUps: updatedFollowUps
+      });
+
+      // Send notification if missed
+      if (status === 'Missed' && patient.assignedCHW) {
+        const chwUser = allUsers.find(u => u.name === patient.assignedCHW && u.role === 'CHW');
+        if (chwUser) {
+          await addNotification({
+            userId: chwUser.uid,
+            title: 'Patient Missed Appointment',
+            message: `Patient ${patient.name} missed their appointment. You have been assigned their scheduled follow-up appointment.`,
+            type: 'ALERT'
+          });
+        }
+      }
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `patients/${patientId}`);
     }
@@ -184,7 +239,10 @@ export function PatientProvider({ children }: { children: React.ReactNode }) {
     if (patients.length === 0) return;
     
     const headers = ['ID', 'Name', 'Age', 'Gender', 'Clinic', 'Clinic ID', 'Department', 'Phone', 'Email', 'Address', 'Status', 'NCD ID', 'BP Measurement', 'Diabetes Reading', 'Registered At'];
-    const csvContent = [
+    
+    let csvContent = `HOSPITAL TRACKING SYSTEM - ALL PATIENTS REPORT\n`;
+    csvContent += `Generated On,${new Date().toLocaleString()}\n\n`;
+    csvContent += [
       headers.join(','),
       ...patients.map(p => [
         p.id,
@@ -217,7 +275,7 @@ export function PatientProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <PatientContext.Provider value={{ patients, addPatient, assignCHW, addFollowUp, deletePatient, exportPatients }}>
+    <PatientContext.Provider value={{ patients, addPatient, assignCHW, addFollowUp, updateFollowUpStatus, deletePatient, exportPatients }}>
       {children}
     </PatientContext.Provider>
   );

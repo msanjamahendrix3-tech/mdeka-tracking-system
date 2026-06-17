@@ -9,6 +9,7 @@ import {
   Search, 
   Calendar, 
   X, 
+  XCircle,
   Activity, 
   Filter,
   User,
@@ -17,12 +18,14 @@ import {
   ShieldAlert,
   MapPin,
   ClipboardList,
-  Download
+  Download,
+  TrendingUp
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { usePatients, Patient, FollowUpRecord } from '../context/PatientContext';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from 'recharts';
 
 interface FlattenedFollowUp {
   patientId: string;
@@ -45,13 +48,13 @@ export default function FollowedUpDashboard() {
   const [selectedStatus, setSelectedStatus] = React.useState('All');
   const [selectedFollowUp, setSelectedFollowUp] = React.useState<FlattenedFollowUp | null>(null);
 
-  // Flatten all completed followups with patient context
+  // Flatten all completed and missed followups with patient context
   const allFollowUps: FlattenedFollowUp[] = React.useMemo(() => {
     const list: FlattenedFollowUp[] = [];
     patients.forEach(p => {
       if (p.followUps) {
         p.followUps.forEach(f => {
-          if (f.status === 'Completed') {
+          if (f.status === 'Completed' || f.status === 'Missed') {
             list.push({
               patientId: p.id,
               patientName: p.name,
@@ -97,7 +100,7 @@ export default function FollowedUpDashboard() {
         item.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.followUp.opdNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.followUp.medications?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.followUp.notes.toLowerCase().includes(searchTerm.toLowerCase());
+        (item.followUp.notes || '').toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchChw = selectedChw === 'All' || item.followUp.officer === selectedChw;
       const matchStatus = selectedStatus === 'All' || item.patientStatus === selectedStatus;
@@ -110,12 +113,14 @@ export default function FollowedUpDashboard() {
     if (filteredFollowUps.length === 0) return;
     
     const headers = [
-      'Patient ID', 'Patient Name', 'Age', 'Gender', 'Address', 'Clinic', 'Status',
+      'Patient ID', 'Patient Name', 'Age', 'Gender', 'Address', 'Clinic', 'Patient Status', 'Follow-up Status',
       'Assigned Officer (CHW)', 'Visit Date', 'OPD Number', 'Temperature', 'Blood Pressure',
       'Medications', 'Symptoms', 'Clinical Notes', 'Photo URL'
     ];
     
-    const csvContent = [
+    let csvContent = `HOSPITAL TRACKING SYSTEM - FOLLOW-UP ASSESSMENTS REPORT\n`;
+    csvContent += `Generated On,${new Date().toLocaleString()}\n\n`;
+    csvContent += [
       headers.join(','),
       ...filteredFollowUps.map(item => [
         item.patientId,
@@ -125,6 +130,7 @@ export default function FollowedUpDashboard() {
         `"${item.patientAddress}"`,
         item.patientClinic,
         item.patientStatus,
+        item.followUp.status,
         `"${item.followUp.officer}"`,
         item.followUp.date,
         `"${item.followUp.opdNumber || ''}"`,
@@ -132,7 +138,7 @@ export default function FollowedUpDashboard() {
         `"${item.followUp.bloodPressure || ''}"`,
         `"${(item.followUp.medications || '').replace(/"/g, '""')}"`,
         `"${(item.followUp.symptoms || '').replace(/"/g, '""')}"`,
-        `"${item.followUp.notes.replace(/"/g, '""')}"`,
+        `"${(item.followUp.notes || '').replace(/"/g, '""')}"`,
         item.followUp.photoUrl || ''
       ].join(','))
     ].join('\n');
@@ -150,18 +156,48 @@ export default function FollowedUpDashboard() {
 
   // Key stats
   const stats = React.useMemo(() => {
-    const total = roleFilteredFollowUps.length;
-    const withPhotos = roleFilteredFollowUps.filter(item => !!item.followUp.photoUrl).length;
-    const atRisk = roleFilteredFollowUps.filter(item => item.patientStatus === 'At Risk' || item.patientStatus === 'Critical').length;
+    const total = filteredFollowUps.length;
+    const completedCount = filteredFollowUps.filter(item => item.followUp.status === 'Completed').length;
+    const missedCount = filteredFollowUps.filter(item => item.followUp.status === 'Missed').length;
+    const withPhotos = filteredFollowUps.filter(item => !!item.followUp.photoUrl).length;
+    const atRisk = filteredFollowUps.filter(item => item.patientStatus === 'At Risk' || item.patientStatus === 'Critical').length;
     
     // Average body temperature
-    const temps = roleFilteredFollowUps
+    const temps = filteredFollowUps
       .map(item => parseFloat(item.followUp.temperature || ''))
       .filter(t => !isNaN(t));
     const avgTemp = temps.length > 0 ? (temps.reduce((sum, val) => sum + val, 0) / temps.length).toFixed(1) : '—';
 
-    return { total, withPhotos, atRisk, avgTemp };
-  }, [roleFilteredFollowUps]);
+    return { total, completedCount, missedCount, withPhotos, atRisk, avgTemp };
+  }, [filteredFollowUps]);
+
+  // Chart data extraction
+  const chartData = React.useMemo(() => {
+    const sorted = [...filteredFollowUps].sort((a, b) => new Date(a.followUp.date).getTime() - new Date(b.followUp.date).getTime());
+    
+    return sorted.map(item => {
+      const dateStr = new Date(item.followUp.date).toLocaleDateString([], { month: 'short', day: 'numeric' });
+      const temp = parseFloat(item.followUp.temperature || '');
+      
+      let systolic = null;
+      let diastolic = null;
+      if (item.followUp.bloodPressure) {
+        const parts = item.followUp.bloodPressure.split('/');
+        if (parts.length === 2 && !isNaN(parseInt(parts[0])) && !isNaN(parseInt(parts[1]))) {
+          systolic = parseInt(parts[0]);
+          diastolic = parseInt(parts[1]);
+        }
+      }
+      
+      return {
+        name: dateStr,
+        patientName: item.patientName,   // Tooltip info
+        temperature: isNaN(temp) ? null : temp,
+        systolic,
+        diastolic,
+      };
+    }).filter(item => item.temperature !== null || item.systolic !== null);
+  }, [filteredFollowUps]);
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -186,14 +222,24 @@ export default function FollowedUpDashboard() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
         <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex items-center gap-4">
           <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
             <CheckCircle2 size={24} />
           </div>
           <div>
-            <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Total Completed</p>
-            <p className="text-2xl font-black text-slate-900 mt-1">{stats.total}</p>
+            <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Completed</p>
+            <p className="text-2xl font-black text-slate-900 mt-1">{stats.completedCount}</p>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex items-center gap-4">
+          <div className="p-3 bg-red-50 text-red-600 rounded-xl">
+            <XCircle size={24} />
+          </div>
+          <div>
+            <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Missed</p>
+            <p className="text-2xl font-black text-slate-900 mt-1">{stats.missedCount}</p>
           </div>
         </div>
 
@@ -276,6 +322,42 @@ export default function FollowedUpDashboard() {
         </div>
       </div>
 
+      {chartData.length > 0 && (
+        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <TrendingUp className="text-blue-600" /> Patient Health Trends
+            </h3>
+            <span className="text-xs text-slate-500 font-medium">Temperature & Blood Pressure over recent visits</span>
+          </div>
+          <div className="h-80 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                <YAxis yAxisId="left" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} domain={['auto', 'auto']} />
+                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} domain={['auto', 'auto']} />
+                <Tooltip 
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  labelStyle={{ fontWeight: 'bold', color: '#0f172a', marginBottom: '4px' }}
+                  formatter={(value: any, name: string) => [value, name === 'temperature' ? 'Temperature (°C)' : name === 'systolic' ? 'Systolic (mmHg)' : 'Diastolic (mmHg)']}
+                  labelFormatter={(label, payload) => {
+                    if (payload && payload.length > 0) {
+                      return `${label} - ${payload[0].payload.patientName}`;
+                    }
+                    return label;
+                  }}
+                />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
+                <Line yAxisId="left" type="monotone" dataKey="temperature" name="Temperature" stroke="#f97316" strokeWidth={3} dot={{ r: 4, fill: '#f97316', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} connectNulls />
+                <Line yAxisId="right" type="monotone" dataKey="systolic" name="Systolic BP" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} connectNulls />
+                <Line yAxisId="right" type="monotone" dataKey="diastolic" name="Diastolic BP" stroke="#0ea5e9" strokeWidth={3} dot={{ r: 4, fill: '#0ea5e9', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} connectNulls />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
       {/* Main Table List */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/20">
@@ -293,6 +375,7 @@ export default function FollowedUpDashboard() {
               <tr className="border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/50">
                 <th className="py-4 px-6">Patient</th>
                 <th className="py-4 px-6">Visit Date</th>
+                <th className="py-4 px-6">Status</th>
                 <th className="py-4 px-6">OPD Number</th>
                 <th className="py-4 px-6">Vitals</th>
                 <th className="py-4 px-6">Medications</th>
@@ -338,6 +421,15 @@ export default function FollowedUpDashboard() {
                     </td>
                     <td className="py-4 px-6 text-sm text-slate-600 font-medium">
                       {new Date(item.followUp.date).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </td>
+                    <td className="py-4 px-6">
+                      <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${
+                        item.followUp.status === 'Completed' 
+                          ? 'bg-blue-50 text-blue-700' 
+                          : 'bg-red-50 text-red-700'
+                      }`}>
+                        {item.followUp.status}
+                      </span>
                     </td>
                     <td className="py-4 px-6 text-sm font-mono text-slate-700">
                       {item.followUp.opdNumber || <span className="text-slate-300 font-sans text-xs">—</span>}

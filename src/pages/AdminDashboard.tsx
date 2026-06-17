@@ -21,11 +21,13 @@ import {
    CreditCard,
    DollarSign,
    Trash2,
-   BookOpen
+   BookOpen,
+   FileText
  } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useAuth, Clinic } from '../context/AuthContext';
 import { SecurityAuditModal } from '../components/SecurityAuditModal';
+import { ReportGeneratorModal } from '../components/ReportGeneratorModal';
 
 export default function AdminDashboard() {
   const { 
@@ -52,6 +54,7 @@ export default function AdminDashboard() {
   const [isCopying, setIsCopying] = React.useState(false);
   const [isRegenerating, setIsRegenerating] = React.useState(false);
   const [isSecurityAuditOpen, setIsSecurityAuditOpen] = React.useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = React.useState(false);
 
   const enrichedResetRequests = resetRequests
     .filter(req => req.status === 'PENDING')
@@ -157,6 +160,12 @@ export default function AdminDashboard() {
           )}
           <button className="p-2 hover:bg-white border border-slate-200 rounded-xl text-slate-500 transition-colors shadow-sm">
             <Settings size={20} />
+          </button>
+          <button 
+            onClick={() => setIsReportModalOpen(true)}
+            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 shadow-lg transition-all"
+          >
+            <FileText size={20} /> PDF Report
           </button>
           <button 
             onClick={() => setIsSecurityAuditOpen(true)}
@@ -749,6 +758,10 @@ export default function AdminDashboard() {
         isOpen={isSecurityAuditOpen} 
         onClose={() => setIsSecurityAuditOpen(false)} 
         users={allUsers}
+      />
+      <ReportGeneratorModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
       />
     </div>
   );

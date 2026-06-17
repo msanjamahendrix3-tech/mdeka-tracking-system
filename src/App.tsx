@@ -66,8 +66,8 @@ export default function App() {
   console.log('App: Rendering component');
   return (
     <AuthProvider>
-      <PatientProvider>
-        <NotificationProvider>
+      <NotificationProvider>
+        <PatientProvider>
           <Router>
             <MalawiBackground />
             <Routes>
@@ -150,9 +150,9 @@ export default function App() {
             <Route path="/doctors" element={<ProtectedRoute roles={['ADMIN', 'CLINICAL', 'SUPER_ADMIN']}><Layout><Community /></Layout></ProtectedRoute>} />
           </Routes>
         </Router>
+        </PatientProvider>
       </NotificationProvider>
-    </PatientProvider>
-  </AuthProvider>
+    </AuthProvider>
   );
 }
 

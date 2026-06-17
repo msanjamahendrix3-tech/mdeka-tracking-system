@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import hospitalLogo from '../assets/images/hospital_logo_1779218652866.png';
 import { 
   LayoutDashboard, 
   UserPlus, 
@@ -25,6 +26,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import ConnectionStatus from './ConnectionStatus';
+import SyncIndicator from './SyncIndicator';
 import { useNotifications } from '../context/NotificationContext';
 
 function cn(...inputs: ClassValue[]) {
@@ -40,8 +42,29 @@ export default function Layout({ children }: LayoutProps) {
   const navigate = useNavigate();
   const { user, logout, isAuthenticated, isAuthReady } = useAuth();
   const { notifications, unreadCount, markAsRead } = useNotifications();
-  const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = React.useState(window.innerWidth >= 1024);
   const [isNotificationOpen, setIsNotificationOpen] = React.useState(false);
+  const [isMobile, setIsMobile] = React.useState(window.innerWidth < 1024);
+
+  React.useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 1024;
+      setIsMobile(mobile);
+      if (mobile) {
+        setIsSidebarOpen(false);
+      } else {
+        setIsSidebarOpen(true);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  React.useEffect(() => {
+    if (isMobile) {
+      setIsSidebarOpen(false);
+    }
+  }, [location.pathname]);
 
   // Redirect to login if not authenticated
   React.useEffect(() => {
@@ -94,16 +117,30 @@ export default function Layout({ children }: LayoutProps) {
   return (
     <div className="min-h-screen bg-transparent flex font-sans">
       <ConnectionStatus />
+      
+      {/* Mobile Overlay */}
+      {isMobile && isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-slate-900/50 z-40 backdrop-blur-sm transition-opacity"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
       <aside 
         className={cn(
-          "bg-white border-r border-slate-200 transition-all duration-300 flex flex-col fixed h-full z-50",
-          isSidebarOpen ? "w-64" : "w-20"
+          "bg-white border-r border-slate-200 transition-transform duration-300 flex flex-col fixed h-full z-50",
+          isSidebarOpen ? "translate-x-0 w-64" : "-translate-x-full w-64 lg:translate-x-0 lg:w-20"
         )}
       >
         <div className="p-6 flex items-center gap-3 border-b border-slate-100">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shrink-0">
-            <Stethoscope size={20} />
+          <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center bg-slate-900 shrink-0 border border-slate-800">
+            <img 
+              src={hospitalLogo} 
+              alt="Hospital Tracking System Logo" 
+              className="w-full h-full object-cover" 
+              referrerPolicy="no-referrer"
+            />
           </div>
           {isSidebarOpen && (
             <div className="flex flex-col min-w-0">
@@ -182,8 +219,8 @@ export default function Layout({ children }: LayoutProps) {
 
       {/* Main Content */}
       <main className={cn(
-        "flex-1 transition-all duration-300",
-        isSidebarOpen ? "ml-64" : "ml-20"
+        "flex-1 transition-all duration-300 min-h-screen",
+        isSidebarOpen ? "lg:ml-64" : "lg:ml-20"
       )}>
         {/* Header */}
         <header className="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-40 px-8 py-4 flex items-center justify-between">
@@ -205,6 +242,7 @@ export default function Layout({ children }: LayoutProps) {
           </div>
 
           <div className="flex items-center gap-4">
+            <SyncIndicator />
             <div className="relative">
               <button 
                 onClick={() => setIsNotificationOpen(!isNotificationOpen)}

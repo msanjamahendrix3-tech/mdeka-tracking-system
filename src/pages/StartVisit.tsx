@@ -117,10 +117,7 @@ export default function StartVisit() {
     e.preventDefault();
     setIsSubmitting(true);
     
-    // Simulate quick database save
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    addFollowUp(patient.id, {
+    await addFollowUp(patient.id, {
       date: new Date().toISOString(),
       officer: user?.name || 'Unknown CHW',
       notes: formData.notes,

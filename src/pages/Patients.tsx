@@ -24,7 +24,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 export default function Patients() {
-  const { patients, exportPatients, deletePatient, addFollowUp } = usePatients();
+  const { patients, exportPatients, deletePatient, addFollowUp, updateFollowUpStatus } = usePatients();
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState<string>('All');
@@ -171,7 +171,7 @@ export default function Patients() {
                           {scheduledVisit.notes && (
                             <p className="text-xs text-slate-500 italic">Notes: {scheduledVisit.notes}</p>
                           )}
-                          <div className="pt-2">
+                          <div className="pt-2 flex items-center gap-2">
                             <button
                               onClick={() => {
                                 setSelectedPatient(null);
@@ -180,6 +180,22 @@ export default function Patients() {
                               className="px-4 py-2 bg-blue-600 text-white font-semibold text-xs rounded-lg hover:bg-blue-700 transition-all shadow-md shadow-blue-100 flex items-center gap-1.5"
                             >
                               <CheckCircle2 size={13} /> Record / Start Visit Now
+                            </button>
+                            <button
+                              onClick={async () => {
+                                await updateFollowUpStatus(selectedPatient.id, scheduledVisit.id, 'Missed');
+                                // Locally update to force UI refresh quickly
+                                setSelectedPatient(prev => {
+                                  if (!prev) return prev;
+                                  return {
+                                    ...prev,
+                                    followUps: prev.followUps?.map(f => f.id === scheduledVisit.id ? { ...f, status: 'Missed' } : f)
+                                  };
+                                });
+                              }}
+                              className="px-4 py-2 bg-red-50 text-red-600 font-semibold text-xs rounded-lg hover:bg-red-100 transition-all shadow-sm border border-red-200 flex items-center gap-1.5"
+                            >
+                              <X size={13} /> Mark Missed
                             </button>
                           </div>
                         </div>

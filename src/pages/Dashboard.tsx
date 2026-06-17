@@ -45,6 +45,24 @@ export default function Dashboard() {
     ? activePatients.filter(p => p.assignedCHW === user?.name)
     : activePatients;
 
+  // Calculate real-time summary metrics
+  const allAssignedPatients = user?.role === 'CHW'
+    ? allPatients.filter(p => p.assignedCHW === user?.name)
+    : allPatients;
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const patientsSeenTodayCount = allAssignedPatients.filter(p => {
+    return p.followUps?.some(f => f.status === 'Completed' && typeof f.date === 'string' && f.date.startsWith(todayStr));
+  }).length;
+
+  const pendingFollowupsCount = allAssignedPatients.reduce((sum, p) => {
+    return sum + (p.followUps?.filter(f => f.status === 'Scheduled')?.length || 0);
+  }, 0);
+
+  const missedFollowupsCount = allAssignedPatients.reduce((sum, p) => {
+    return sum + (p.followUps?.filter(f => f.status === 'Missed')?.length || 0);
+  }, 0);
+
   const healthMetrics = [
     { name: 'Normal', value: patients.filter(p => p.status === 'Normal').length, color: '#3b82f6' },
     { name: 'At Risk', value: patients.filter(p => p.status === 'At Risk').length, color: '#f59e0b' },
@@ -103,6 +121,11 @@ export default function Dashboard() {
     csvContent += `Malaria Positive,${malariaCount}\n`;
     csvContent += `Under Five Clinic,${underFiveCount}\n\n`;
 
+    csvContent += "FOLLOW-UPS SUMMARY,COUNT\n";
+    csvContent += `Seen Today,${patientsSeenTodayCount}\n`;
+    csvContent += `Pending Scheduled,${pendingFollowupsCount}\n`;
+    csvContent += `Missed Follow-ups,${missedFollowupsCount}\n\n`;
+
     csvContent += "MONTH,PATIENTS RECRUITED / REGISTERED\n";
     patientGrowthData.forEach(item => {
       csvContent += `${item.name},${item.patients}\n`;
@@ -159,32 +182,25 @@ export default function Dashboard() {
         </div>
 
         <div 
-          className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm cursor-pointer hover:shadow-md transition-all"
-          onClick={() => navigate('/appointments')}
+          className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm transition-all"
         >
           <div className="flex items-center justify-between mb-4">
             <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600">
-              <Calendar size={24} />
+              <ShieldCheck size={24} />
             </div>
-            <span className="text-emerald-500 text-sm font-medium flex items-center gap-1">
-              <TrendingUp size={16} /> +0%
-            </span>
           </div>
-          <p className="text-slate-500 text-sm font-medium">New Appointments</p>
-          <p className="text-3xl font-bold text-slate-900 mt-1">0</p>
+          <p className="text-slate-500 text-sm font-medium">Patients Seen Today</p>
+          <p className="text-3xl font-bold text-slate-900 mt-1">{patientsSeenTodayCount}</p>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm transition-all">
           <div className="flex items-center justify-between mb-4">
             <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center text-purple-600">
-              <Activity size={24} />
+              <Calendar size={24} />
             </div>
-            <span className="text-emerald-500 text-sm font-medium flex items-center gap-1">
-              {patients.length > 0 ? '85%' : '0%'}
-            </span>
           </div>
-          <p className="text-slate-500 text-sm font-medium">Health Index</p>
-          <p className="text-3xl font-bold text-slate-900 mt-1">{patients.length > 0 ? '85%' : '0%'}</p>
+          <p className="text-slate-500 text-sm font-medium">Pending Follow-ups</p>
+          <p className="text-3xl font-bold text-slate-900 mt-1">{pendingFollowupsCount}</p>
         </div>
       </div>
 
