@@ -13,6 +13,7 @@ import {
 import { db, auth } from '../firebase';
 import { useAuth, handleFirestoreError } from './AuthContext';
 import { useNotifications } from './NotificationContext';
+import { getSupabaseClient } from '../lib/supabase';
 
 export interface FollowUpRecord {
   id: string;
@@ -230,6 +231,17 @@ export function PatientProvider({ children }: { children: React.ReactNode }) {
   const deletePatient = async (patientId: string) => {
     try {
       await deleteDoc(doc(db, 'patients', patientId));
+      
+      // Attempt to delete from Supabase if configured/active
+      try {
+        const supabase = getSupabaseClient();
+        if (supabase) {
+          await supabase.from('patients').delete().eq('id', patientId);
+          console.log(`Successfully deleted patient ${patientId} from Supabase syncing reservoir.`);
+        }
+      } catch (sbErr) {
+        console.warn('Supabase synchronized deletion failed (this is expected if not fully connected:', sbErr);
+      }
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `patients/${patientId}`);
     }

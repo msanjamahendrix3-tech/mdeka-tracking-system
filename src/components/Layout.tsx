@@ -161,6 +161,9 @@ export default function Layout({ children }: LayoutProps) {
               <Link
                 key={item.path}
                 to={item.path}
+                onClick={() => {
+                  if (isMobile) setIsSidebarOpen(false);
+                }}
                 className={cn(
                   "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group",
                   location.pathname === item.path 
@@ -184,6 +187,9 @@ export default function Layout({ children }: LayoutProps) {
                 <Link
                   key={item.path}
                   to={item.path}
+                  onClick={() => {
+                    if (isMobile) setIsSidebarOpen(false);
+                  }}
                   className={cn(
                     "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group",
                     location.pathname === item.path 
@@ -223,7 +229,7 @@ export default function Layout({ children }: LayoutProps) {
         isSidebarOpen ? "lg:ml-64" : "lg:ml-20"
       )}>
         {/* Header */}
-        <header className="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-40 px-8 py-4 flex items-center justify-between">
+        <header className="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-40 px-4 md:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button 
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -272,7 +278,7 @@ export default function Layout({ children }: LayoutProps) {
                     </div>
                     <div className="max-h-96 overflow-y-auto divide-y divide-slate-50">
                       {notifications.length === 0 ? (
-                        <div className="p-8 text-center text-slate-400">
+                        <div className="p-4 md:p-8 text-center text-slate-400">
                           <Bell className="mx-auto mb-2 opacity-20" size={32} />
                           <p className="text-xs">No notifications yet</p>
                         </div>
@@ -324,7 +330,7 @@ export default function Layout({ children }: LayoutProps) {
         </header>
 
         {/* Page Content */}
-        <div className="p-8 max-w-7xl mx-auto">
+        <div className="p-4 md:p-8 max-w-7xl mx-auto">
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}

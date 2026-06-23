@@ -119,7 +119,7 @@ export default function FollowUp() {
 
       {/* Home Follow-up Assignments (Malaria) */}
       <div className="bg-orange-50 rounded-3xl border border-orange-200 shadow-sm overflow-hidden">
-        <div className="p-8 border-b border-orange-100 flex items-center justify-between bg-orange-100/30">
+        <div className="p-4 md:p-8 border-b border-orange-100 flex items-center justify-between bg-orange-100/30">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-orange-600 rounded-xl flex items-center justify-center text-white">
               <MapPin size={20} />
@@ -174,7 +174,7 @@ export default function FollowUp() {
 
       {/* List */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="p-8 border-b border-slate-100">
+        <div className="p-4 md:p-8 border-b border-slate-100">
           <h3 className="text-lg font-bold text-slate-900">Upcoming Follow-ups</h3>
         </div>
         <div className="divide-y divide-slate-100">

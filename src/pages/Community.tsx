@@ -365,7 +365,7 @@ export default function Community() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.1 }}
-              className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6"
+              className="bg-white p-4 md:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
@@ -447,7 +447,7 @@ export default function Community() {
       {/* Sidebar */}
       <div className="space-y-8">
         {/* Trending Topics */}
-        <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+        <div className="bg-white p-4 md:p-8 rounded-3xl border border-slate-200 shadow-sm">
           <h3 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
             <TrendingUp className="text-blue-600" /> Trending Topics
           </h3>
@@ -470,7 +470,7 @@ export default function Community() {
         </div>
 
         {/* Top Contributors */}
-        <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+        <div className="bg-white p-4 md:p-8 rounded-3xl border border-slate-200 shadow-sm">
           <h3 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
             <Award className="text-amber-500" /> Top Contributors
           </h3>
@@ -497,7 +497,7 @@ export default function Community() {
         </div>
 
         {/* Resources */}
-        <div className="bg-blue-600 p-8 rounded-3xl text-white">
+        <div className="bg-blue-600 p-4 md:p-8 rounded-3xl text-white">
           <BookOpen size={32} className="mb-4 text-blue-200" />
           <h3 className="text-xl font-bold mb-2">Medical Resources</h3>
           <p className="text-blue-100 text-sm mb-6 leading-relaxed">

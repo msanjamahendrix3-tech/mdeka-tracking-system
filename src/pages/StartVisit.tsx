@@ -229,13 +229,13 @@ export default function StartVisit() {
         {/* Visit Form */}
         <div className="lg:col-span-2">
           <form onSubmit={handleSubmit} className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="p-8 border-b border-slate-100 bg-slate-50/50">
+            <div className="p-4 md:p-8 border-b border-slate-100 bg-slate-50/50">
               <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                 <ClipboardCheck className="text-blue-600" /> Visit Assessment
               </h3>
             </div>
             
-            <div className="p-8 space-y-8">
+            <div className="p-4 md:p-8 space-y-8">
               {/* OPD Number Section */}
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
@@ -414,7 +414,7 @@ export default function StartVisit() {
               </div>
             </div>
 
-            <div className="p-8 bg-slate-50 border-t border-slate-100 flex justify-end">
+            <div className="p-4 md:p-8 bg-slate-50 border-t border-slate-100 flex justify-end">
               <button 
                 disabled={isSubmitting || isCapturing}
                 type="submit"

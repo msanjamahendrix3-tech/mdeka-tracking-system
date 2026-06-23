@@ -129,7 +129,7 @@ export default function Register() {
         <motion.div 
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="max-w-md w-full bg-white rounded-3xl shadow-xl p-8 text-center space-y-6 border border-slate-100"
+          className="max-w-md w-full bg-white rounded-3xl shadow-xl p-4 md:p-8 text-center space-y-6 border border-slate-100"
         >
           <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
             <CheckCircle2 size={40} />
@@ -158,7 +158,7 @@ export default function Register() {
         className="max-w-lg w-full"
       >
         <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/60 border border-slate-100 overflow-hidden">
-          <div className="p-8 bg-blue-600 text-white space-y-4">
+          <div className="p-4 md:p-8 bg-blue-600 text-white space-y-4">
             <Link to="/login" className="inline-flex items-center gap-2 text-blue-100 hover:text-white transition-colors text-sm mb-2">
               <ArrowLeft size={16} /> Back to Login
             </Link>
@@ -173,7 +173,7 @@ export default function Register() {
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="p-8 space-y-6">
+          <form onSubmit={handleSubmit} className="p-4 md:p-8 space-y-6">
             {error && (
               <div className="p-4 bg-red-50 border border-red-100 rounded-xl flex items-center gap-3 text-red-600 text-sm">
                 <AlertCircle size={18} />

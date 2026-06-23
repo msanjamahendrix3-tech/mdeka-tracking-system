@@ -24,10 +24,11 @@ import {
    BookOpen,
    FileText
  } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useAuth, Clinic } from '../context/AuthContext';
 import { SecurityAuditModal } from '../components/SecurityAuditModal';
 import { ReportGeneratorModal } from '../components/ReportGeneratorModal';
+import { ReportSchedulerModal } from '../components/ReportSchedulerModal';
 
 export default function AdminDashboard() {
   const { 
@@ -50,11 +51,23 @@ export default function AdminDashboard() {
     deleteClinic
   } = useAuth();
   const [userSearch, setUserSearch] = React.useState('');
+  const [clinicFilter, setClinicFilter] = React.useState('ALL');
   const [currentClinic, setCurrentClinic] = React.useState<Clinic | null>(null);
   const [isCopying, setIsCopying] = React.useState(false);
   const [isRegenerating, setIsRegenerating] = React.useState(false);
   const [isSecurityAuditOpen, setIsSecurityAuditOpen] = React.useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = React.useState(false);
+  const [isSchedulerModalOpen, setIsSchedulerModalOpen] = React.useState(false);
+  const [toast, setToast] = React.useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  React.useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => {
+        setToast(null);
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
   const enrichedResetRequests = resetRequests
     .filter(req => req.status === 'PENDING')
@@ -92,7 +105,10 @@ export default function AdminDashboard() {
       (u.username || '').toLowerCase().includes(userSearch.toLowerCase()) ||
       (u.role || '').toLowerCase().includes(userSearch.toLowerCase());
     
-    if (user?.role === 'SUPER_ADMIN') return matchesSearch;
+    if (user?.role === 'SUPER_ADMIN') {
+      const matchesClinic = clinicFilter === 'ALL' || u.clinicId === clinicFilter;
+      return matchesSearch && matchesClinic;
+    }
     return matchesSearch && u.clinicId === user?.clinicId;
   });
 
@@ -209,7 +225,7 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* User Approvals */}
         <div className="lg:col-span-3 bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-blue-50/50">
+          <div className="p-4 md:p-8 border-b border-slate-100 flex items-center justify-between bg-blue-50/50">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white">
                 <Users size={20} />
@@ -268,13 +284,31 @@ export default function AdminDashboard() {
                         <td className="px-8 py-4 text-right">
                           <div className="flex items-center justify-end gap-2">
                             <button 
-                              onClick={() => approveUser(u.uid)}
+                              onClick={async () => {
+                                try {
+                                  await approveUser(u.uid);
+                                  setToast({ message: `Successfully approved admin ${u.name}.`, type: 'success' });
+                                } catch (err: any) {
+                                  console.error(err);
+                                  setToast({ message: `Failed to approve user: ${err?.message || String(err)}`, type: 'error' });
+                                }
+                              }}
                               className="px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 shadow-md transition-all uppercase tracking-wider"
                             >
                               Approve Admin
                             </button>
                             <button 
-                              onClick={() => rejectUser(u.uid)}
+                              onClick={async () => {
+                                if (window.confirm(`Are you sure you want to reject and remove registration request for ${u.name}?`)) {
+                                  try {
+                                    await rejectUser(u.uid);
+                                    setToast({ message: `Successfully rejected ${u.name}.`, type: 'success' });
+                                  } catch (err: any) {
+                                    console.error(err);
+                                    setToast({ message: `Failed to reject user: ${err?.message || String(err)}`, type: 'error' });
+                                  }
+                                }
+                              }}
                               className="px-3 py-1.5 bg-white border border-slate-200 text-slate-400 text-xs font-bold rounded-lg hover:bg-slate-50 transition-all uppercase tracking-wider"
                             >
                               Reject
@@ -318,13 +352,31 @@ export default function AdminDashboard() {
                         <td className="px-8 py-4 text-right">
                           <div className="flex items-center justify-end gap-2">
                             <button 
-                              onClick={() => approveUser(u.uid)}
+                              onClick={async () => {
+                                try {
+                                  await approveUser(u.uid);
+                                  setToast({ message: `Successfully approved staff ${u.name}.`, type: 'success' });
+                                } catch (err: any) {
+                                  console.error(err);
+                                  setToast({ message: `Failed to approve user: ${err?.message || String(err)}`, type: 'error' });
+                                }
+                              }}
                               className="px-3 py-1.5 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 transition-all"
                             >
                               Approve Staff
                             </button>
                             <button 
-                              onClick={() => rejectUser(u.uid)}
+                              onClick={async () => {
+                                if (window.confirm(`Are you sure you want to reject and remove registration request for ${u.name}?`)) {
+                                  try {
+                                    await rejectUser(u.uid);
+                                    setToast({ message: `Successfully rejected ${u.name}.`, type: 'success' });
+                                  } catch (err: any) {
+                                    console.error(err);
+                                    setToast({ message: `Failed to reject user: ${err?.message || String(err)}`, type: 'error' });
+                                  }
+                                }
+                              }}
                               className="px-3 py-1.5 bg-slate-50 text-slate-500 text-xs font-bold rounded-lg hover:bg-slate-100 transition-all"
                             >
                               Reject
@@ -350,7 +402,7 @@ export default function AdminDashboard() {
 
         {/* Password Reset Requests */}
         <div className="lg:col-span-3 bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-amber-50/50">
+          <div className="p-4 md:p-8 border-b border-slate-100 flex items-center justify-between bg-amber-50/50">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-amber-600 rounded-xl flex items-center justify-center text-white">
                 <Lock size={20} />
@@ -422,7 +474,7 @@ export default function AdminDashboard() {
 
         {/* Resource Requests */}
         <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-8 border-b border-slate-100 flex items-center justify-between">
+          <div className="p-4 md:p-8 border-b border-slate-100 flex items-center justify-between">
             <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
               <BookOpen className="text-emerald-500" size={24} />
               Resource Requests
@@ -488,18 +540,38 @@ export default function AdminDashboard() {
         </div>
 
         {/* User Management */}
-        <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-8 border-b border-slate-100 flex items-center justify-between">
-            <h3 className="text-lg font-bold text-slate-900">User Management</h3>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-              <input 
-                type="text" 
-                placeholder="Search users..." 
-                value={userSearch}
-                onChange={(e) => setUserSearch(e.target.value)}
-                className="pl-10 pr-4 py-2 bg-slate-50 border-none rounded-xl text-sm w-48 focus:ring-2 focus:ring-blue-500/20 transition-all"
-              />
+        <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden" id="user-management-panel">
+          <div className="p-4 md:p-8 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-bold text-slate-900">User Management</h3>
+              <p className="text-xs text-slate-500 font-medium">Manage and delete workspace staff permissions.</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              {user?.role === 'SUPER_ADMIN' && (
+                <select
+                  value={clinicFilter}
+                  onChange={(e) => setClinicFilter(e.target.value)}
+                  className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-600 outline-none focus:ring-2 focus:ring-blue-500/20"
+                  id="admin-clinic-filter-select"
+                >
+                  <option value="ALL">All Facilities</option>
+                  {allClinics.map((clinic) => (
+                    <option key={clinic.id} value={clinic.id}>
+                      {clinic.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                <input 
+                  type="text" 
+                  placeholder="Search users..." 
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  className="pl-10 pr-4 py-2 bg-slate-50 border-none rounded-xl text-sm w-48 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                />
+              </div>
             </div>
           </div>
           <div className="overflow-x-auto">
@@ -527,7 +599,7 @@ export default function AdminDashboard() {
                             className="text-xs text-slate-500 cursor-pointer hover:text-blue-600 transition-colors"
                             onClick={() => {
                               navigator.clipboard.writeText(u.email);
-                              alert('Email copied to clipboard');
+                              setToast({ message: 'Email copied to clipboard', type: 'success' });
                             }}
                             title="Click to copy email"
                           >
@@ -558,13 +630,24 @@ export default function AdminDashboard() {
                       <div className="flex justify-end gap-2">
                         {u.uid !== user?.uid && (
                           <button 
-                            onClick={() => {
-                              if (window.confirm(`Are you sure you want to delete user ${u.name}?`)) {
-                                deleteUser(u.uid);
+                            onClick={async () => {
+                              if (window.confirm(`Are you sure you want to permanently delete user ${u.name} from their registered facility?`)) {
+                                try {
+                                  await deleteUser(u.uid);
+                                  setToast({ message: `Successfully deleted user ${u.name}.`, type: 'success' });
+                                } catch (err: any) {
+                                  console.error('Failed to delete user:', err);
+                                  let userMsg = 'Failed to delete user. Please try again.';
+                                  if (err?.message && err.message.toLowerCase().includes('permission')) {
+                                    userMsg = 'Permission denied: You do not have sufficient privileges to delete this user.';
+                                  }
+                                  setToast({ message: userMsg, type: 'error' });
+                                }
                               }
                             }}
                             className="p-2 hover:bg-red-50 rounded-lg text-slate-400 hover:text-red-600 transition-colors"
                             title="Delete User"
+                            id={`user-delete-btn-${u.uid}`}
                           >
                             <Trash2 size={16} />
                           </button>
@@ -582,7 +665,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* System Logs */}
-        <div className="bg-slate-900 rounded-3xl p-8 text-white space-y-6">
+        <div className="bg-slate-900 rounded-3xl p-4 md:p-8 text-white space-y-6">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-bold flex items-center gap-2">
               <Activity className="text-emerald-400" size={20} /> System Logs
@@ -619,7 +702,7 @@ export default function AdminDashboard() {
         {/* Clinic Management (SUPER_ADMIN only) */}
         {user?.role === 'SUPER_ADMIN' && (
           <div className="lg:col-span-3 bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-emerald-50/30">
+            <div className="p-4 md:p-8 border-b border-slate-100 flex items-center justify-between bg-emerald-50/30">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white">
                   <Hospital size={20} />
@@ -659,7 +742,23 @@ export default function AdminDashboard() {
                             </div>
                             <div>
                               <span className="text-sm font-bold text-slate-900 block">{clinic.name}</span>
-                              <span className="text-[10px] text-slate-400 font-medium uppercase">{clinic.village || 'No Village'} • TA {clinic.ta || 'N/A'}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] text-slate-400 font-medium uppercase">{clinic.village || 'No Village'} • TA {clinic.ta || 'N/A'}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setClinicFilter(clinic.id);
+                                    const userEl = document.getElementById('user-management-panel');
+                                    if (userEl) {
+                                      userEl.scrollIntoView({ behavior: 'smooth' });
+                                    }
+                                  }}
+                                  className="text-[10px] text-blue-600 hover:text-blue-800 font-semibold underline cursor-pointer inline-block"
+                                  title="Filter user list to this clinic"
+                                >
+                                  (View Users)
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </td>
@@ -724,8 +823,16 @@ export default function AdminDashboard() {
       </div>
 
       {/* Security Settings */}
-      <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
-        <h3 className="text-xl font-bold text-slate-900 mb-8">Security Settings</h3>
+      <div className="bg-white p-4 md:p-8 rounded-3xl border border-slate-200 shadow-sm">
+        <div className="flex items-center justify-between mb-8">
+          <h3 className="text-xl font-bold text-slate-900">System Automation & Security Settings</h3>
+          <button 
+            onClick={() => setIsSchedulerModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 font-semibold rounded-xl hover:bg-blue-100 transition-colors"
+          >
+            <Settings size={18} /> Configure Automated Reports
+          </button>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {[
             { title: 'Two-Factor Auth', desc: 'Require 2FA for all administrative accounts.', enabled: true },
@@ -763,6 +870,35 @@ export default function AdminDashboard() {
         isOpen={isReportModalOpen}
         onClose={() => setIsReportModalOpen(false)}
       />
+      <ReportSchedulerModal
+        isOpen={isSchedulerModalOpen}
+        onClose={() => setIsSchedulerModalOpen(false)}
+      />
+
+      {/* Floating Animated Toast Banner */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+            className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-xl border text-sm font-semibold select-none ${
+              toast.type === 'success' 
+                ? 'bg-emerald-50 border-emerald-100 text-emerald-800' 
+                : toast.type === 'error'
+                ? 'bg-red-50 border-red-100 text-red-800'
+                : 'bg-blue-50 border-blue-100 text-blue-800'
+            }`}
+            id="admin-dashboard-toast"
+          >
+            <div className={`w-2 h-2 rounded-full ${
+              toast.type === 'success' ? 'bg-emerald-500' : toast.type === 'error' ? 'bg-red-500' : 'bg-blue-500'
+            }`} />
+            {toast.message}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

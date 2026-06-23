@@ -76,24 +76,55 @@ export default function Dashboard() {
     { label: 'Under Five (Vaccinated)', value: patients.filter(p => (p.department || p.clinic) === 'UnderFive').length.toString(), icon: HeartPulse, color: 'text-emerald-600', bg: 'bg-emerald-50' },
   ];
 
-  // Group patients by month for the line chart
-  const last7Months = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date();
-    d.setMonth(d.getMonth() - i);
-    return d.toLocaleString('default', { month: 'short' });
-  }).reverse();
+  // Group patient data for the last 30 days for Recovery Progress
+  const recoveryTrendData = React.useMemo(() => {
+    const data = [];
+    const dateMap = new Map();
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const str = d.toISOString().split('T')[0];
+      const display = d.toLocaleDateString('default', { month: 'short', day: 'numeric' });
+      dateMap.set(str, { date: display, rawDate: str, registered: 0, completed: 0 });
+    }
 
-  const patientGrowthData = last7Months.map(month => ({
-    name: month,
-    patients: patients.filter(p => {
-      if (!p.registeredAt) return false;
+    allAssignedPatients.forEach(p => {
       try {
-        return new Date(p.registeredAt).toLocaleString('default', { month: 'short' }) === month;
+        if (p.registeredAt) {
+          const rDate = new Date(p.registeredAt).toISOString().split('T')[0];
+          if (dateMap.has(rDate)) dateMap.get(rDate).registered += 1;
+        }
+        if (p.followUps) {
+          p.followUps.forEach(f => {
+            if (f.status === 'Completed' && f.date) {
+              const cDate = f.date.split('T')[0];
+              if (dateMap.has(cDate)) dateMap.get(cDate).completed += 1;
+            }
+          });
+        }
       } catch (e) {
-        return false;
+        // parsing error
       }
-    }).length
-  }));
+    });
+
+    dateMap.forEach(v => data.push(v));
+    return data;
+  }, [allAssignedPatients]);
+
+  // Group patients by clinic region for Regional Health Trends
+  const regionalData = React.useMemo(() => {
+    const regionMap = new Map();
+    allAssignedPatients.forEach(p => {
+      const region = p.clinic || 'Unknown Region';
+      if (!regionMap.has(region)) {
+        regionMap.set(region, { region, Normal: 0, AtRisk: 0, Critical: 0 });
+      }
+      if (p.status === 'Normal') regionMap.get(region).Normal += 1;
+      else if (p.status === 'At Risk') regionMap.get(region).AtRisk += 1;
+      else if (p.status === 'Critical') regionMap.get(region).Critical += 1;
+    });
+    return Array.from(regionMap.values());
+  }, [allAssignedPatients]);
 
   const exportDashboardReport = () => {
     const totalCount = patients.length;
@@ -126,9 +157,9 @@ export default function Dashboard() {
     csvContent += `Pending Scheduled,${pendingFollowupsCount}\n`;
     csvContent += `Missed Follow-ups,${missedFollowupsCount}\n\n`;
 
-    csvContent += "MONTH,PATIENTS RECRUITED / REGISTERED\n";
-    patientGrowthData.forEach(item => {
-      csvContent += `${item.name},${item.patients}\n`;
+    csvContent += "DATE,NEW PATIENTS,COMPLETED RECOVERIES\n";
+    recoveryTrendData.forEach(item => {
+      csvContent += `${item.rawDate},${item.registered},${item.completed}\n`;
     });
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -227,26 +258,30 @@ export default function Dashboard() {
 
       {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+        <div className="bg-white p-4 md:p-8 rounded-3xl border border-slate-200 shadow-sm">
           <div className="flex items-center justify-between mb-8">
-            <h3 className="text-lg font-bold text-slate-900">Patient Growth</h3>
+            <h3 className="text-lg font-bold text-slate-900">Patient Recovery Progress</h3>
             <select className="bg-slate-50 border-none rounded-lg text-sm font-medium text-slate-600 focus:ring-0">
-              <option>Last 7 Months</option>
-              <option>Last Year</option>
+              <option>Last 30 Days</option>
+              <option>Last 7 Days</option>
             </select>
           </div>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={patientGrowthData}>
+              <AreaChart data={recoveryTrendData}>
                 <defs>
-                  <linearGradient id="colorPatients" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient id="colorCompleted" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                  </linearGradient>
+                  <linearGradient id="colorRegistered" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
                     <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis 
-                  dataKey="name" 
+                  dataKey="date" 
                   axisLine={false} 
                   tickLine={false} 
                   tick={{ fill: '#94a3b8', fontSize: 12 }}
@@ -267,47 +302,64 @@ export default function Dashboard() {
                 />
                 <Area 
                   type="monotone" 
-                  dataKey="patients" 
+                  dataKey="registered" 
+                  name="New Patients"
                   stroke="#3b82f6" 
-                  strokeWidth={3}
+                  strokeWidth={2}
                   fillOpacity={1} 
-                  fill="url(#colorPatients)" 
+                  fill="url(#colorRegistered)" 
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="completed" 
+                  name="Completed Follow-ups"
+                  stroke="#10b981" 
+                  strokeWidth={2}
+                  fillOpacity={1} 
+                  fill="url(#colorCompleted)" 
                 />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm relative">
+        <div className="bg-white p-4 md:p-8 rounded-3xl border border-slate-200 shadow-sm relative">
           <div className="flex items-center justify-between mb-8">
-            <h3 className="text-lg font-bold text-slate-900">Health Status Distribution</h3>
+            <h3 className="text-lg font-bold text-slate-900">Regional Health Trends</h3>
             <button className="p-2 hover:bg-slate-50 rounded-lg text-slate-400">
               <MoreHorizontal size={20} />
             </button>
           </div>
           <div className="h-[300px] w-full flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={healthMetrics}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={80}
-                  outerRadius={100}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {healthMetrics.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
+              <BarChart data={regionalData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis 
+                  dataKey="region" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fill: '#94a3b8', fontSize: 12 }}
+                  dy={10}
+                />
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fill: '#94a3b8', fontSize: 12 }}
+                />
+                <Tooltip 
+                  cursor={{ fill: 'transparent' }}
+                  contentStyle={{ 
+                    backgroundColor: '#fff', 
+                    borderRadius: '12px', 
+                    border: '1px solid #e2e8f0',
+                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                  }}
+                />
+                <Bar dataKey="Normal" stackId="a" fill="#3b82f6" radius={[0, 0, 4, 4]} />
+                <Bar dataKey="AtRisk" name="At Risk" stackId="a" fill="#f59e0b" />
+                <Bar dataKey="Critical" stackId="a" fill="#ef4444" radius={[4, 4, 0, 0]} />
+              </BarChart>
             </ResponsiveContainer>
-            <div className="absolute flex flex-col items-center">
-              <p className="text-3xl font-bold text-slate-900">{patients.length}</p>
-              <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Total</p>
-            </div>
           </div>
           <div className="flex justify-center gap-8 mt-4">
             {healthMetrics.map((item) => (
@@ -322,7 +374,7 @@ export default function Dashboard() {
 
       {/* Recent Patients Table */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="p-8 border-b border-slate-100 flex items-center justify-between">
+        <div className="p-4 md:p-8 border-b border-slate-100 flex items-center justify-between">
           <h3 className="text-lg font-bold text-slate-900">Recent Patients</h3>
           <button className="text-blue-600 text-sm font-semibold hover:underline">View All</button>
         </div>

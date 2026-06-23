@@ -303,7 +303,7 @@ export default function Library() {
       </div>
 
       {/* Suggested for You Section */}
-      <div className="bg-blue-600 rounded-[2rem] p-8 text-white relative overflow-hidden shadow-xl shadow-blue-200">
+      <div className="bg-blue-600 rounded-[2rem] p-4 md:p-8 text-white relative overflow-hidden shadow-xl shadow-blue-200">
         <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
           <div className="max-w-xl">
             <h2 className="text-2xl font-bold mb-2">Need specific training?</h2>

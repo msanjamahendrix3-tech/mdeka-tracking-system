@@ -94,7 +94,7 @@ service cloud.firestore {
     match /patients/{patientId} {
       allow read: if isSuperAdmin() || (isApproved() && (getProfile().clinicId == existing().clinicId || getProfile().clinicId == 'SYSTEM'));
       allow create, update: if isApproved() && (isSuperAdmin() || getProfile().clinicId == incoming().clinicId);
-      allow delete: if isSuperAdmin() || (isAdmin() && getProfile().clinicId == existing().clinicId);
+      allow delete: if isSuperAdmin() || (isApproved() && (getProfile().role == 'ADMIN' || getProfile().role == 'CLINICAL') && getProfile().clinicId == existing().clinicId);
     }
 
     match /posts/{postId} {

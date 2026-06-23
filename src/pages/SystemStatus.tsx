@@ -225,7 +225,7 @@ export default function SystemStatus() {
         </div>
       </motion.div>
 
-      <div className="bg-slate-900 text-white p-8 rounded-3xl relative overflow-hidden">
+      <div className="bg-slate-900 text-white p-4 md:p-8 rounded-3xl relative overflow-hidden">
         <div className="relative z-10">
           <h2 className="text-2xl font-bold mb-4">Isolation Theory</h2>
           <div className="flex flex-col md:flex-row items-center gap-8 justify-between">

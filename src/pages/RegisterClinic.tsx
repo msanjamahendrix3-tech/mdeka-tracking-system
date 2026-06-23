@@ -116,7 +116,7 @@ export default function RegisterClinic() {
   return (
     <div className="min-h-screen bg-transparent flex flex-col md:flex-row">
       {/* Branding Side */}
-      <div className="md:w-1/3 bg-blue-600 p-8 md:p-12 text-white flex flex-col justify-between relative overflow-hidden">
+      <div className="md:w-1/3 bg-blue-600 p-4 md:p-8 md:p-12 text-white flex flex-col justify-between relative overflow-hidden">
         <div className="relative z-10">
           <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-md mb-8">
             <Hospital size={28} />
@@ -151,7 +151,7 @@ export default function RegisterClinic() {
       </div>
 
       {/* Form Side */}
-      <div className="flex-1 p-8 md:p-24 flex items-center justify-center">
+      <div className="flex-1 p-4 md:p-8 md:p-24 flex items-center justify-center">
         <div className="max-w-md w-full">
           <div className="mb-10 text-center md:text-left">
             <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-2">Clinic Registration</h2>

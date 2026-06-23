@@ -82,7 +82,7 @@ export default function CHWDashboard() {
 
       {/* Active Assignments */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="p-8 border-b border-slate-100 flex items-center justify-between">
+        <div className="p-4 md:p-8 border-b border-slate-100 flex items-center justify-between">
           <h3 className="text-lg font-bold text-slate-900">Today's Home Visits</h3>
           <button className="text-blue-600 text-sm font-semibold hover:underline">View Map</button>
         </div>
@@ -143,7 +143,7 @@ export default function CHWDashboard() {
       {/* Completed Follow-ups */}
       {completedVisits.length > 0 && (
         <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-8 border-b border-slate-100">
+          <div className="p-4 md:p-8 border-b border-slate-100">
             <h3 className="text-lg font-bold text-slate-900">Completed Today</h3>
           </div>
           <div className="divide-y divide-slate-100">
@@ -177,7 +177,7 @@ export default function CHWDashboard() {
 
       {/* Community Insights */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-slate-900 rounded-3xl p-8 text-white">
+        <div className="bg-slate-900 rounded-3xl p-4 md:p-8 text-white">
           <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
             <TrendingUp className="text-emerald-400" /> Community Trends
           </h3>
@@ -193,7 +193,7 @@ export default function CHWDashboard() {
           </div>
         </div>
 
-        <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm">
+        <div className="bg-white rounded-3xl p-4 md:p-8 border border-slate-200 shadow-sm">
           <h3 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
             <Users className="text-blue-600" /> Team Communication
           </h3>

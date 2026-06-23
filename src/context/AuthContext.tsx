@@ -19,7 +19,9 @@ import {
   onSnapshot, 
   query, 
   where,
-  getDocs 
+  getDocs,
+  getDocFromCache,
+  getDocsFromCache
 } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 
@@ -49,7 +51,7 @@ export interface Clinic {
   createdAt: number;
 }
 
-enum OperationType {
+export enum OperationType {
   CREATE = 'create',
   UPDATE = 'update',
   DELETE = 'delete',
@@ -74,6 +76,34 @@ interface FirestoreErrorInfo {
       email: string | null;
       photoUrl: string | null;
     }[];
+  }
+}
+
+async function safeGetDoc(docRef: any) {
+  try {
+    return await getDoc(docRef);
+  } catch (error: any) {
+    console.warn('safeGetDoc failed, trying cache:', error);
+    try {
+      return await getDocFromCache(docRef);
+    } catch (cacheError) {
+      console.error('safeGetDoc cache backup also failed:', cacheError);
+      throw error;
+    }
+  }
+}
+
+async function safeGetDocs(queryRef: any) {
+  try {
+    return await getDocs(queryRef);
+  } catch (error: any) {
+    console.warn('safeGetDocs failed, trying cache:', error);
+    try {
+      return await getDocsFromCache(queryRef);
+    } catch (cacheError) {
+      console.error('safeGetDocs cache backup also failed:', cacheError);
+      throw error;
+    }
   }
 }
 
@@ -203,7 +233,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               if (profile.role !== 'SUPER_ADMIN' && profile.clinicId && profile.clinicId !== 'SYSTEM') {
                 try {
                   const clinicRef = doc(db, 'clinics', profile.clinicId);
-                  const clinicSnap = await getDoc(clinicRef);
+                  const clinicSnap = await safeGetDoc(clinicRef);
                   if (clinicSnap.exists()) {
                     const clinicData = clinicSnap.data() as Clinic;
                     if (clinicData.status === 'SUSPENDED' || clinicData.subscriptionStatus === 'UNPAID') {
@@ -304,7 +334,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         : query(usersRef, where('clinicId', '==', user.clinicId));
 
       const unsubscribeUsers = onSnapshot(q, (snapshot) => {
-        const usersList = snapshot.docs.map(doc => doc.data() as UserProfile);
+        const usersList = snapshot.docs.map(doc => ({
+          uid: doc.id,
+          ...doc.data()
+        } as UserProfile));
         setAllUsers(usersList);
       }, (error) => {
         handleFirestoreError(error, OperationType.LIST, 'users');
@@ -333,7 +366,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const firebaseUser = result.user;
       
       const userDocRef = doc(db, 'users', firebaseUser.uid);
-      const userDoc = await getDoc(userDocRef);
+      const userDoc = await safeGetDoc(userDocRef);
       
       if (userDoc.exists()) {
         let profile = userDoc.data() as UserProfile;
@@ -396,14 +429,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const firebaseUser = result.user;
       
       const userDocRef = doc(db, 'users', firebaseUser.uid);
-      const userDoc = await getDoc(userDocRef);
+      const userDoc = await safeGetDoc(userDocRef);
       
       if (userDoc.exists()) {
         let profile = userDoc.data() as UserProfile;
 
         // Check clinic status
         if (profile.role !== 'SUPER_ADMIN' && profile.clinicId && profile.clinicId !== 'SYSTEM') {
-          const clinicSnap = await getDoc(doc(db, 'clinics', profile.clinicId));
+          const clinicSnap = await safeGetDoc(doc(db, 'clinics', profile.clinicId));
           if (clinicSnap.exists()) {
             const clinic = clinicSnap.data() as Clinic;
             if (clinic.status === 'SUSPENDED' || clinic.subscriptionStatus === 'UNPAID') {
@@ -631,6 +664,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await updateDoc(doc(db, 'users', uid), { status: 'APPROVED' });
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `users/${uid}`);
+      throw error;
     }
   };
   
@@ -676,7 +710,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const approvePasswordReset = async (requestId: string) => {
     try {
       const requestRef = doc(db, 'password_reset_requests', requestId);
-      const requestDoc = await getDoc(requestRef);
+      const requestDoc = await safeGetDoc(requestRef);
       if (!requestDoc.exists()) return;
       
       const requestData = requestDoc.data() as PasswordResetRequest;
@@ -740,6 +774,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await deleteDoc(doc(db, 'users', uid));
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `users/${uid}`);
+      throw error;
     }
   };
 
@@ -751,6 +786,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await deleteDoc(doc(db, 'users', uid));
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `users/${uid}`);
+      throw error;
     }
   };
 
@@ -758,7 +794,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       // 1. Delete all users belonging to this clinic
       const usersQuery = query(collection(db, 'users'), where('clinicId', '==', clinicId));
-      const usersSnapshot = await getDocs(usersQuery);
+      const usersSnapshot = await safeGetDocs(usersQuery);
       
       const deleteUserPromises = usersSnapshot.docs.map(userDoc => 
         deleteDoc(doc(db, 'users', userDoc.id))
@@ -767,7 +803,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // 2. Delete all patients belonging to this clinic
       const patientsQuery = query(collection(db, 'patients'), where('clinicId', '==', clinicId));
-      const patientsSnapshot = await getDocs(patientsQuery);
+      const patientsSnapshot = await safeGetDocs(patientsQuery);
       
       const deletePatientPromises = patientsSnapshot.docs.map(patientDoc => 
         deleteDoc(doc(db, 'patients', patientDoc.id))
@@ -817,22 +853,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       createClinic,
       getClinicByCode: async (code: string) => {
         const q = query(collection(db, 'clinics'), where('code', '==', code.toUpperCase()));
-        const snapshot = await getDocs(q);
+        const snapshot = await safeGetDocs(q);
         if (snapshot.empty) return null;
-        return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as Clinic;
+        return { id: snapshot.docs[0].id, ...(snapshot.docs[0].data() as any) } as Clinic;
       },
       getClinicById: async (id: string) => {
         const docRef = doc(db, 'clinics', id);
-        const docSnap = await getDoc(docRef);
+        const docSnap = await safeGetDoc(docRef);
         if (docSnap.exists()) {
-          return { id: docSnap.id, ...docSnap.data() } as Clinic;
+          return { id: docSnap.id, ...(docSnap.data() as any) } as Clinic;
         }
         return null;
       },
       getPublicClinics: async () => {
         const clinicsRef = collection(db, 'clinics');
-        const snapshot = await getDocs(clinicsRef);
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Clinic);
+        const snapshot = await safeGetDocs(clinicsRef);
+        return snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) }) as Clinic);
       },
       regenerateClinicCode: async (clinicId: string) => {
         try {

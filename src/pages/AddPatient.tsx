@@ -136,7 +136,7 @@ export default function AddPatient() {
 
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Personal Information */}
-        <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+        <div className="bg-white p-4 md:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
           <div className="flex items-center gap-2 text-blue-600 font-bold uppercase tracking-wider text-xs">
             <User size={16} /> Personal Information
           </div>
@@ -212,7 +212,7 @@ export default function AddPatient() {
               exit={{ opacity: 0, height: 0 }}
               className="overflow-hidden"
             >
-              <div className="bg-blue-50 p-8 rounded-3xl border border-blue-100 shadow-sm space-y-6 mb-8">
+              <div className="bg-blue-50 p-4 md:p-8 rounded-3xl border border-blue-100 shadow-sm space-y-6 mb-8">
                 <div className="flex items-center gap-2 text-blue-700 font-bold uppercase tracking-wider text-xs">
                   <HeartPulse size={16} /> NCD Specific Details
                 </div>
@@ -348,7 +348,7 @@ export default function AddPatient() {
         </div>
 
         {/* Contact Information */}
-        <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+        <div className="bg-white p-4 md:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
           <div className="flex items-center gap-2 text-emerald-600 font-bold uppercase tracking-wider text-xs">
             <Phone size={16} /> Contact Information
           </div>
@@ -385,7 +385,7 @@ export default function AddPatient() {
         </div>
 
         {/* Medical History */}
-        <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+        <div className="bg-white p-4 md:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
           <div className="flex items-center gap-2 text-purple-600 font-bold uppercase tracking-wider text-xs">
             <HeartPulse size={16} /> Medical History & Notes
           </div>
@@ -413,7 +413,7 @@ export default function AddPatient() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-semibold text-slate-700">Medical Documents</label>
-              <div className="border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center hover:border-blue-500 transition-colors cursor-pointer group">
+              <div className="border-2 border-dashed border-slate-200 rounded-2xl p-4 md:p-8 text-center hover:border-blue-500 transition-colors cursor-pointer group">
                 <Upload className="mx-auto text-slate-400 group-hover:text-blue-500 transition-colors mb-2" size={32} />
                 <p className="text-sm font-medium text-slate-600">Click to upload or drag and drop</p>
                 <p className="text-xs text-slate-400 mt-1">PDF, JPG or PNG (max. 10MB)</p>

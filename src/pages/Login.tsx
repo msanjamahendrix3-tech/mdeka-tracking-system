@@ -76,7 +76,7 @@ export default function Login() {
         className="max-w-md w-full"
       >
         <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/60 border border-slate-100 overflow-hidden">
-          <div className="p-8 bg-blue-600 text-white text-center space-y-4">
+          <div className="p-4 md:p-8 bg-blue-600 text-white text-center space-y-4">
             <div className="w-16 h-16 rounded-2xl overflow-hidden flex items-center justify-center mx-auto bg-slate-900 shadow-lg border border-slate-800">
               <img 
                 src={hospitalLogo} 
@@ -91,7 +91,7 @@ export default function Login() {
             </div>
           </div>
 
-          <div className="p-8 space-y-6">
+          <div className="p-4 md:p-8 space-y-6">
             {error && (
               <motion.div 
                 initial={{ opacity: 0, scale: 0.95 }}
@@ -236,7 +236,7 @@ export default function Login() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md p-8 relative"
+              className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md p-4 md:p-8 relative"
             >
               <button 
                 onClick={() => {

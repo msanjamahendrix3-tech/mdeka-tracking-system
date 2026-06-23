@@ -1,6 +1,7 @@
 import React from 'react';
 import { usePatients, Patient, FollowUpRecord } from '../context/PatientContext';
 import { useAuth } from '../context/AuthContext';
+import { DeleteConfirmationModal } from '../components/DeleteConfirmationModal';
 import { 
   Users, 
   Search, 
@@ -18,7 +19,8 @@ import {
   HeartPulse,
   User,
   Trash2,
-  CheckCircle2
+  CheckCircle2,
+  Eye
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -29,6 +31,29 @@ export default function Patients() {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState<string>('All');
   const [selectedPatient, setSelectedPatient] = React.useState<Patient | null>(null);
+  const [activeDropdownId, setActiveDropdownId] = React.useState<string | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
+  const [patientToDelete, setPatientToDelete] = React.useState<Patient | null>(null);
+
+  const handleConfirmDelete = async () => {
+    if (!patientToDelete) return;
+    await deletePatient(patientToDelete.id);
+    if (selectedPatient?.id === patientToDelete.id) {
+      setSelectedPatient(null);
+    }
+    setPatientToDelete(null);
+  };
+
+  React.useEffect(() => {
+    const handleCloseDropdowns = () => {
+      setActiveDropdownId(null);
+    };
+    window.addEventListener('click', handleCloseDropdowns);
+    return () => {
+      window.removeEventListener('click', handleCloseDropdowns);
+    };
+  }, []);
+
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -95,7 +120,7 @@ export default function Patients() {
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-8 space-y-8">
+              <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                   <div className="space-y-6">
                     <div className="space-y-4">
@@ -291,15 +316,15 @@ export default function Patients() {
 
               <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex justify-end items-center gap-3">
                 <div className="flex-1">
-                  {(user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN') && (
+                  {(user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN' || user?.role === 'CLINICAL') && (
                     <button 
-                      onClick={async () => {
-                        if (window.confirm(`Are you sure you want to permanently delete patient ${selectedPatient.name}?`)) {
-                          await deletePatient(selectedPatient.id);
-                          setSelectedPatient(null);
-                        }
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPatientToDelete(selectedPatient);
+                        setIsDeleteModalOpen(true);
                       }}
                       className="px-4 py-2 text-red-600 font-semibold hover:bg-red-50 rounded-xl transition-all flex items-center gap-2"
+                      id="details-delete-patient-btn"
                     >
                       <Trash2 size={18} /> Delete Patient
                     </button>
@@ -480,27 +505,104 @@ export default function Patients() {
                         <span className="text-xs font-bold text-slate-600">{patient.status}</span>
                       </div>
                     </td>
-                    <td className="px-8 py-5 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        {(user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN') && (
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (window.confirm(`Are you sure you want to delete patient ${patient.name}?`)) {
-                                deletePatient(patient.id);
-                              }
-                            }}
-                            className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-xl transition-all"
-                            title="Delete Patient"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        )}
-                        <button className="p-2 hover:bg-white border border-transparent hover:border-slate-200 rounded-xl text-slate-400 transition-all">
-                          <MoreVertical size={18} />
-                        </button>
-                      </div>
-                    </td>
+                     <td className="px-8 py-5 text-right">
+                       <div className="flex items-center justify-end gap-2">
+                         {(user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN' || user?.role === 'CLINICAL') && (
+                            <button 
+                              onClick={(e) => {
+                                 e.stopPropagation();
+                                 setPatientToDelete(patient);
+                                 setIsDeleteModalOpen(true);
+                               }}
+                              className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-xl transition-all"
+                              title="Delete Patient"
+                              id={`inline-delete-btn-${patient.id}`}
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          )}
+                         
+                         <div className="relative inline-block text-left">
+                           <button 
+                             onClick={(e) => {
+                               e.stopPropagation();
+                               setActiveDropdownId(activeDropdownId === patient.id ? null : patient.id);
+                             }}
+                             className="p-2 hover:bg-slate-100 rounded-xl text-slate-400 hover:text-slate-600 transition-all border border-transparent active:scale-95"
+                             title="More Actions"
+                           >
+                             <MoreVertical size={18} />
+                           </button>
+
+                           <AnimatePresence>
+                             {activeDropdownId === patient.id && (
+                               <motion.div 
+                                 initial={{ opacity: 0, scale: 0.95, y: -5 }}
+                                 animate={{ opacity: 1, scale: 1, y: 0 }}
+                                 exit={{ opacity: 0, scale: 0.95, y: -5 }}
+                                 transition={{ duration: 0.15 }}
+                                 className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden py-1 text-left"
+                                 onClick={(e) => e.stopPropagation()}
+                               >
+                                 <button
+                                   onClick={() => {
+                                     setSelectedPatient(patient);
+                                     setActiveDropdownId(null);
+                                   }}
+                                   className="w-full px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition text-left"
+                                 >
+                                   <Eye size={14} className="text-slate-400" />
+                                   View Details
+                                 </button>
+                                 
+                                 {user?.role === 'CHW' ? (
+                                   <button
+                                     onClick={() => {
+                                       setActiveDropdownId(null);
+                                       navigate(`/start-visit/${patient.id}`);
+                                     }}
+                                     className="w-full px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition text-left"
+                                   >
+                                     <Activity size={14} className="text-slate-400" />
+                                     Start Visit Session
+                                   </button>
+                                 ) : (
+                                   <button
+                                     onClick={() => {
+                                       setActiveDropdownId(null);
+                                       navigate('/new-follow-up', { state: { patientId: patient.id } });
+                                     }}
+                                     className="w-full px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition text-left"
+                                   >
+                                     <Calendar size={14} className="text-slate-400" />
+                                     Schedule Follow-up
+                                   </button>
+                                 )}
+
+                                {(user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN' || user?.role === 'CLINICAL') && (
+                                   <>
+                                     <div className="border-t border-slate-100 my-1" />
+                                     <button
+                                       onClick={(e) => {
+                                         e.stopPropagation();
+                                         setActiveDropdownId(null);
+                                         setPatientToDelete(patient);
+                                         setIsDeleteModalOpen(true);
+                                       }}
+                                       className="w-full px-4 py-2.5 text-xs font-semibold text-red-600 hover:bg-red-50 flex items-center gap-2 transition text-left"
+                                       id={`dropdown-delete-btn-${patient.id}`}
+                                     >
+                                       <Trash2 size={14} className="text-red-400" />
+                                       Delete Patient
+                                     </button>
+                                   </>
+                                 )}
+                               </motion.div>
+                             )}
+                           </AnimatePresence>
+                         </div>
+                       </div>
+                     </td>
                   </motion.tr>
                 ))
               )}
@@ -526,6 +628,16 @@ export default function Patients() {
           Download Data File
         </button>
       </div>
+
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setPatientToDelete(null);
+        }}
+        onConfirm={handleConfirmDelete}
+        patientName={patientToDelete?.name || ''}
+      />
     </div>
   );
 }

@@ -54,12 +54,12 @@ export default function Appointments() {
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Patient Details */}
         <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-8 border-b border-slate-100 bg-slate-50/50">
+          <div className="p-4 md:p-8 border-b border-slate-100 bg-slate-50/50">
             <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
               <User className="text-blue-600" size={20} /> Patient & Person Details
             </h3>
           </div>
-          <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="p-4 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <label className="text-sm font-semibold text-slate-700">Full Name</label>
               <div className="relative">
@@ -103,12 +103,12 @@ export default function Appointments() {
 
         {/* Appointment Details */}
         <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-8 border-b border-slate-100 bg-slate-50/50">
+          <div className="p-4 md:p-8 border-b border-slate-100 bg-slate-50/50">
             <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
               <Calendar className="text-blue-600" size={20} /> Appointment Schedule
             </h3>
           </div>
-          <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="p-4 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <label className="text-sm font-semibold text-slate-700">Clinic Type</label>
               <select 
@@ -164,7 +164,7 @@ export default function Appointments() {
 
         {/* CHW Assignment */}
         <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-8 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+          <div className="p-4 md:p-8 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
             <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
               <Users className="text-blue-600" size={20} /> Community Health Worker Assignment
             </h3>
@@ -182,7 +182,7 @@ export default function Appointments() {
             <motion.div 
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
-              className="p-8 bg-blue-50/30"
+              className="p-4 md:p-8 bg-blue-50/30"
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">

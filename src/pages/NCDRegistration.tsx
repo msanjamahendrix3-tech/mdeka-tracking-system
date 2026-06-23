@@ -88,7 +88,7 @@ export default function NCDRegistration() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 md:p-8 rounded-3xl border border-slate-200 shadow-sm">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">NCD Registration</h1>
           <p className="text-slate-500 mt-1">Register a new patient for the Non-Communicable Diseases clinic.</p>
@@ -125,7 +125,7 @@ export default function NCDRegistration() {
 
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Personal Info */}
-        <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+        <div className="bg-white p-4 md:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
           <div className="flex items-center gap-2 text-pink-600 font-bold uppercase tracking-wider text-xs">
             <User size={16} /> Basic Information
           </div>
@@ -178,7 +178,7 @@ export default function NCDRegistration() {
         </div>
 
         {/* NCD Specific Details */}
-        <div className="bg-pink-50 p-8 rounded-3xl border border-pink-100 shadow-sm space-y-6">
+        <div className="bg-pink-50 p-4 md:p-8 rounded-3xl border border-pink-100 shadow-sm space-y-6">
           <div className="flex items-center gap-2 text-pink-700 font-bold uppercase tracking-wider text-xs">
             <HeartPulse size={16} /> Heart & Chronic Metrics
           </div>
@@ -231,7 +231,7 @@ export default function NCDRegistration() {
         </div>
 
         {/* Contact info */}
-        <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+        <div className="bg-white p-4 md:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
           <div className="flex items-center gap-2 text-blue-600 font-bold uppercase tracking-wider text-xs">
             <Phone size={16} /> Contact & Demographics
           </div>

@@ -360,7 +360,7 @@ export default function FollowedUpDashboard() {
 
       {/* Main Table List */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/20">
+        <div className="p-4 md:p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/20">
           <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
             <ClipboardList className="text-blue-600" /> Finished Assessments
           </h3>
