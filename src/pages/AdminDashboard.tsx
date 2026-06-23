@@ -22,7 +22,9 @@ import {
    DollarSign,
    Trash2,
    BookOpen,
-   FileText
+   FileText,
+   X,
+   AlertTriangle
  } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth, Clinic } from '../context/AuthContext';
@@ -59,6 +61,15 @@ export default function AdminDashboard() {
   const [isReportModalOpen, setIsReportModalOpen] = React.useState(false);
   const [isSchedulerModalOpen, setIsSchedulerModalOpen] = React.useState(false);
   const [toast, setToast] = React.useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const [confirmDialog, setConfirmDialog] = React.useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText?: string;
+    isDanger?: boolean;
+    onConfirm: () => Promise<void> | void;
+  } | null>(null);
+  const [isConfirmLoading, setIsConfirmLoading] = React.useState(false);
 
   React.useEffect(() => {
     if (toast) {
@@ -156,15 +167,29 @@ export default function AdminDashboard() {
                 </button>
                 <button 
                   disabled={isRegenerating}
-                  onClick={async () => {
-                    if (window.confirm('Are you sure you want to regenerate the join code? Existing staff will not be affected, but new staff will need the new code.')) {
-                      setIsRegenerating(true);
-                      const result = await regenerateClinicCode(currentClinic.id);
-                      if (result.success) {
-                        setCurrentClinic(prev => prev ? { ...prev, code: result.newCode! } : null);
+                  onClick={() => {
+                    setConfirmDialog({
+                      isOpen: true,
+                      title: 'Regenerate Join Code',
+                      message: 'Are you sure you want to regenerate the join code? Existing staff will not be affected, but new staff will need the new code.',
+                      confirmText: 'Regenerate',
+                      isDanger: false,
+                      onConfirm: async () => {
+                        setIsRegenerating(true);
+                        try {
+                          const result = await regenerateClinicCode(currentClinic.id);
+                          if (result.success) {
+                            setCurrentClinic(prev => prev ? { ...prev, code: result.newCode! } : null);
+                            setToast({ message: 'Successfully regenerated join code.', type: 'success' });
+                          }
+                        } catch (err: any) {
+                          console.error(err);
+                          setToast({ message: `Failed to regenerate code: ${err?.message || String(err)}`, type: 'error' });
+                        } finally {
+                          setIsRegenerating(false);
+                        }
                       }
-                      setIsRegenerating(false);
-                    }
+                    });
                   }}
                   className={`p-2 hover:bg-slate-50 rounded-lg text-slate-400 hover:text-blue-600 transition-all ${isRegenerating ? 'animate-spin' : ''}`}
                   title="Regenerate random code"
@@ -298,16 +323,23 @@ export default function AdminDashboard() {
                               Approve Admin
                             </button>
                             <button 
-                              onClick={async () => {
-                                if (window.confirm(`Are you sure you want to reject and remove registration request for ${u.name}?`)) {
-                                  try {
-                                    await rejectUser(u.uid);
-                                    setToast({ message: `Successfully rejected ${u.name}.`, type: 'success' });
-                                  } catch (err: any) {
-                                    console.error(err);
-                                    setToast({ message: `Failed to reject user: ${err?.message || String(err)}`, type: 'error' });
+                              onClick={() => {
+                                setConfirmDialog({
+                                  isOpen: true,
+                                  title: 'Reject Booking/Admin Request',
+                                  message: `Are you sure you want to reject and remove registration request for ${u.name}?`,
+                                  confirmText: 'Reject Request',
+                                  isDanger: true,
+                                  onConfirm: async () => {
+                                    try {
+                                      await rejectUser(u.uid);
+                                      setToast({ message: `Successfully rejected ${u.name}.`, type: 'success' });
+                                    } catch (err: any) {
+                                      console.error(err);
+                                      setToast({ message: `Failed to reject user: ${err?.message || String(err)}`, type: 'error' });
+                                    }
                                   }
-                                }
+                                });
                               }}
                               className="px-3 py-1.5 bg-white border border-slate-200 text-slate-400 text-xs font-bold rounded-lg hover:bg-slate-50 transition-all uppercase tracking-wider"
                             >
@@ -366,16 +398,23 @@ export default function AdminDashboard() {
                               Approve Staff
                             </button>
                             <button 
-                              onClick={async () => {
-                                if (window.confirm(`Are you sure you want to reject and remove registration request for ${u.name}?`)) {
-                                  try {
-                                    await rejectUser(u.uid);
-                                    setToast({ message: `Successfully rejected ${u.name}.`, type: 'success' });
-                                  } catch (err: any) {
-                                    console.error(err);
-                                    setToast({ message: `Failed to reject user: ${err?.message || String(err)}`, type: 'error' });
+                              onClick={() => {
+                                setConfirmDialog({
+                                  isOpen: true,
+                                  title: 'Reject Facility Registration',
+                                  message: `Are you sure you want to reject and remove registration request for ${u.name}?`,
+                                  confirmText: 'Reject Request',
+                                  isDanger: true,
+                                  onConfirm: async () => {
+                                    try {
+                                      await rejectUser(u.uid);
+                                      setToast({ message: `Successfully rejected ${u.name}.`, type: 'success' });
+                                    } catch (err: any) {
+                                      console.error(err);
+                                      setToast({ message: `Failed to reject user: ${err?.message || String(err)}`, type: 'error' });
+                                    }
                                   }
-                                }
+                                });
                               }}
                               className="px-3 py-1.5 bg-slate-50 text-slate-500 text-xs font-bold rounded-lg hover:bg-slate-100 transition-all"
                             >
@@ -630,20 +669,28 @@ export default function AdminDashboard() {
                       <div className="flex justify-end gap-2">
                         {u.uid !== user?.uid && (
                           <button 
-                            onClick={async () => {
-                              if (window.confirm(`Are you sure you want to permanently delete user ${u.name} from their registered facility?`)) {
-                                try {
-                                  await deleteUser(u.uid);
-                                  setToast({ message: `Successfully deleted user ${u.name}.`, type: 'success' });
-                                } catch (err: any) {
-                                  console.error('Failed to delete user:', err);
-                                  let userMsg = 'Failed to delete user. Please try again.';
-                                  if (err?.message && err.message.toLowerCase().includes('permission')) {
-                                    userMsg = 'Permission denied: You do not have sufficient privileges to delete this user.';
+                            onClick={() => {
+                              setConfirmDialog({
+                                isOpen: true,
+                                title: 'Delete User Profile',
+                                message: `Are you sure you want to permanently delete user ${u.name} from their registered facility?`,
+                                confirmText: 'Permanently Delete',
+                                isDanger: true,
+                                onConfirm: async () => {
+                                  try {
+                                    await deleteUser(u.uid);
+                                    setToast({ message: `Successfully deleted user ${u.name}.`, type: 'success' });
+                                  } catch (err: any) {
+                                    console.error('Failed to delete user:', err);
+                                    const errMsg = err?.message || String(err);
+                                    let userMsg = `Failed to delete user: ${errMsg}`;
+                                    if (errMsg.toLowerCase().includes('permission')) {
+                                      userMsg = 'Permission denied: You do not have sufficient privileges to delete this user.';
+                                    }
+                                    setToast({ message: userMsg, type: 'error' });
                                   }
-                                  setToast({ message: userMsg, type: 'error' });
                                 }
-                              }
+                              });
                             }}
                             className="p-2 hover:bg-red-50 rounded-lg text-slate-400 hover:text-red-600 transition-colors"
                             title="Delete User"
@@ -803,9 +850,22 @@ export default function AdminDashboard() {
                               className="p-2 hover:bg-red-50 text-red-400 hover:text-red-600 rounded-lg transition-colors"
                               title="Delete Facility"
                               onClick={() => {
-                                if(window.confirm(`Are you sure you want to permanently remove ${clinic.name}? This action cannot be undone.`)) {
-                                  deleteClinic(clinic.id);
-                                }
+                                setConfirmDialog({
+                                  isOpen: true,
+                                  title: 'Delete Registered Facility',
+                                  message: `Are you sure you want to permanently remove ${clinic.name}? This action cannot be undone.`,
+                                  confirmText: 'Remove Facility',
+                                  isDanger: true,
+                                  onConfirm: async () => {
+                                    try {
+                                      await deleteClinic(clinic.id);
+                                      setToast({ message: `Successfully deleted facility ${clinic.name}.`, type: 'success' });
+                                    } catch (err: any) {
+                                      console.error('Failed to delete clinic:', err);
+                                      setToast({ message: `Failed to delete facility: ${err?.message || String(err)}`, type: 'error' });
+                                    }
+                                  }
+                                });
                               }}
                             >
                               <XCircle size={18} />
@@ -874,6 +934,88 @@ export default function AdminDashboard() {
         isOpen={isSchedulerModalOpen}
         onClose={() => setIsSchedulerModalOpen(false)}
       />
+
+      {/* Reusable Admin Custom Confirmation Modal */}
+      <AnimatePresence>
+        {confirmDialog?.isOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.15, ease: 'easeOut' }}
+              className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl relative flex flex-col border border-slate-100"
+              id="admin-confirm-dialog-container"
+            >
+              {/* Header */}
+              <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${confirmDialog.isDanger ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}`}>
+                    <AlertTriangle size={22} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900">{confirmDialog.title}</h3>
+                    <p className="text-xs text-slate-500">System modification check</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => !isConfirmLoading && setConfirmDialog(null)}
+                  className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-full transition-colors"
+                  id="close-admin-confirm-btn"
+                  disabled={isConfirmLoading}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-6">
+                <p className="text-sm text-slate-600 leading-relaxed font-semibold">
+                  {confirmDialog.message}
+                </p>
+              </div>
+
+              {/* Footer */}
+              <div className="p-6 border-t border-slate-100 bg-slate-50 shrink-0 flex justify-end gap-3">
+                <button
+                  onClick={() => !isConfirmLoading && setConfirmDialog(null)}
+                  disabled={isConfirmLoading}
+                  className="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-200 rounded-xl transition disabled:opacity-50"
+                  id="cancel-admin-confirm-btn"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    setIsConfirmLoading(true);
+                    try {
+                      await confirmDialog.onConfirm();
+                      setConfirmDialog(null);
+                    } catch (err) {
+                      console.error('Confirm operation fail', err);
+                    } finally {
+                      setIsConfirmLoading(false);
+                    }
+                  }}
+                  disabled={isConfirmLoading}
+                  className={`flex items-center gap-2 px-6 py-2 text-white text-sm font-bold rounded-xl transition ${
+                    confirmDialog.isDanger 
+                      ? 'bg-red-600 hover:bg-red-700' 
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  }`}
+                  id="submit-admin-confirm-btn"
+                >
+                  {isConfirmLoading ? (
+                    <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    confirmDialog.confirmText || 'Confirm'
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Floating Animated Toast Banner */}
       <AnimatePresence>

@@ -222,7 +222,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.log('AuthContext: User snapshot received', docSnap.exists() ? 'Exists' : 'Does not exist');
           try {
             if (docSnap.exists()) {
-              let profile = docSnap.data() as UserProfile;
+              let profile = { uid: docSnap.id, ...docSnap.data() } as UserProfile;
               if (!profile) {
                 console.error('AuthContext: User profile data is empty');
                 setUser(null);
