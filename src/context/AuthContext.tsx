@@ -327,7 +327,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user]);
 
   useEffect(() => {
-    if ((user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && user?.status === 'APPROVED') {
+    if (user && user.status === 'APPROVED') {
       const usersRef = collection(db, 'users');
       const q = user.role === 'SUPER_ADMIN' 
         ? usersRef 

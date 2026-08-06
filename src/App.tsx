@@ -28,6 +28,7 @@ import Library from './pages/Library';
 import NCDRegistration from './pages/NCDRegistration';
 import Settings from './pages/Settings';
 import FollowedUpDashboard from './pages/FollowedUpDashboard';
+import Doctors from './pages/Doctors';
 import { MalawiBackground } from './components/MalawiBackground';
 
 function ProtectedRoute({ children, roles }: { children: React.ReactNode, roles?: string[] }) {
@@ -147,7 +148,7 @@ export default function App() {
             {/* Fallback routes */}
             <Route path="/appointments" element={<ProtectedRoute roles={['ADMIN', 'CLINICAL', 'SUPER_ADMIN']}><Layout><Appointments /></Layout></ProtectedRoute>} />
             <Route path="/clinics" element={<ProtectedRoute roles={['ADMIN', 'CLINICAL', 'SUPER_ADMIN']}><Layout><Dashboard /></Layout></ProtectedRoute>} />
-            <Route path="/doctors" element={<ProtectedRoute roles={['ADMIN', 'CLINICAL', 'SUPER_ADMIN']}><Layout><Community /></Layout></ProtectedRoute>} />
+            <Route path="/doctors" element={<ProtectedRoute roles={['ADMIN', 'CLINICAL', 'SUPER_ADMIN', 'CHW']}><Layout><Doctors /></Layout></ProtectedRoute>} />
           </Routes>
         </Router>
         </PatientProvider>

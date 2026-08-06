@@ -25,16 +25,22 @@ service cloud.firestore {
     function isSuperAdmin() { 
       return isSignedIn() && (
         request.auth.token.email == "msanjamahendrix3@gmail.com" || 
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getProfile().role == 'SUPER_ADMIN')
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         (getProfile().role == 'SUPER_ADMIN' || getProfile().clinicId == 'SYSTEM'))
       );
     }
     
     function isAdmin() { 
-      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getProfile().role == 'ADMIN';
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+             (getProfile().role == 'ADMIN' || getProfile().role == 'SUPER_ADMIN');
     }
     
     function isApproved() {
-      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (getProfile().status == 'APPROVED' || getProfile().role == 'SUPER_ADMIN');
+      return isSignedIn() && (
+        request.auth.token.email == "msanjamahendrix3@gmail.com" ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         (getProfile().status == 'APPROVED' || getProfile().role == 'SUPER_ADMIN' || getProfile().clinicId == 'SYSTEM'))
+      );
     }
 
     // ===============================================================
@@ -63,11 +69,8 @@ service cloud.firestore {
     // ===============================================================
 
     match /users/{userId} {
-      // Get: Own profile, SuperAdmin, or Clinic Admin for their staff
-      allow get: if isOwner(userId) || isSuperAdmin() || (isAdmin() && getProfile().clinicId == existing().clinicId);
-      
-      // List: SuperAdmin or Clinic Admin (Enforced by clinicId query)
-      allow list: if isSuperAdmin() || (isAdmin());
+      // Read: Any signed in user can view user profiles (directory, referrals, facility staff)
+      allow read: if isSignedIn();
       
       // Create: Registration flow
       allow create: if isSignedIn() && isValidUser(incoming()) && 

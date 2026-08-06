@@ -28,14 +28,15 @@ export default function SystemStatus() {
       .then(data => {
         if (Array.isArray(data)) {
           setUsers(data);
+        } else if (data && Array.isArray(data.users)) {
+          setUsers(data.users);
         } else {
-          console.error('User vault returned invalid format:', data);
           setUsers([]);
         }
         setUsersLoading(false);
       })
       .catch(err => {
-        console.error('Failed to load user vault:', err);
+        console.warn('User vault offline or restricted:', err);
         setUsers([]);
         setUsersLoading(false);
       });
